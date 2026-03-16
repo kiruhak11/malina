@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PhotoSource {
+  seed
+  telegram
+  admin
+}
+
+model Dessert {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  category      String
+  name          String
+  description   String
+  inside        String
+  decor         String
+  price         String
+  leadTimeHours Int?
+  ttkProteins   String?
+  ttkFats       String?
+  ttkCarbs      String?
+  ttkKcal       String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  photos Photo[]
+
+  @@index([active])
+  @@index([category])
+}
+
+model Photo {
+  id         String      @id @default(cuid())
+  path       String
+  title      String
+  inGallery  Boolean     @default(true)
+  source     PhotoSource @default(seed)
+  createdAt  DateTime    @default(now())
+
+  dessertId String?
+  dessert   Dessert? @relation(fields: [dessertId], references: [id], onDelete: SetNull)
+
+  @@index([dessertId])
+  @@index([inGallery])
+  @@index([createdAt])
+}
+
+model Review {
+  id              String   @id @default(cuid())
+  name            String
+  phone           String?
+  text            String
+  rating          Int
+  approved        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  moderatedAt     DateTime?
+  telegramMessage Int?
+
+  @@index([approved])
+  @@index([createdAt])
+}
+
+model OrderRequest {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  dessert   String
+  orderDate String
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model AdminAccessLink {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+
+  @@index([expiresAt])
+}

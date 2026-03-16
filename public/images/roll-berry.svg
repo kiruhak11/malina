@@ -1,0 +1,12 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f3adc8"/>
+      <stop offset="1" stop-color="#e86a9a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#g)"/>
+  <circle cx="980" cy="140" r="180" fill="#ffffff" fill-opacity="0.16"/>
+  <circle cx="220" cy="640" r="220" fill="#ffffff" fill-opacity="0.14"/>
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Verdana, sans-serif" font-size="52" font-weight="700">Фото десерта</text>
+</svg>
