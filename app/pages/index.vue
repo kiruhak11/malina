@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref } from 'vue'
 import type { Product, Review } from '~/types/site'
-import { phoneDisplay, phoneHref, telegramChannel } from '~/data/siteData'
+import { maxGroup, phoneDisplay, phoneHref, telegramChannel } from '~/data/siteData'
 
 useHead({
   title: 'МАЛИНА — десерты на заказ',
@@ -199,6 +199,7 @@ const submitReview = async () => {
         :phone-display="phoneDisplay"
         :phone-href="phoneHref"
         :telegram-channel="telegramChannel"
+        :max-group="maxGroup"
       />
     </template>
   </main>

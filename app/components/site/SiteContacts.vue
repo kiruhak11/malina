@@ -3,6 +3,7 @@ defineProps<{
   phoneDisplay: string
   phoneHref: string
   telegramChannel: string
+  maxGroup: string
 }>()
 </script>
 
@@ -16,6 +17,10 @@ defineProps<{
     <p>
       Telegram канал:
       <a :href="telegramChannel" target="_blank" rel="noopener noreferrer">Перейти в канал</a>
+    </p>
+    <p>
+      MAX группа:
+      <a :href="maxGroup" target="_blank" rel="noopener noreferrer">Перейти в группу</a>
     </p>
   </section>
 </template>

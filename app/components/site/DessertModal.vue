@@ -197,11 +197,6 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="product-modal-text">
-              <h4>Состав</h4>
-              <p>{{ dessert.inside || "нет данных" }}</p>
-            </div>
-
-            <div class="product-modal-text">
               <h4>Декор</h4>
               <p>{{ dessert.decor || "нет данных" }}</p>
             </div>

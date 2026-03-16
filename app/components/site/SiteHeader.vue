@@ -5,6 +5,7 @@ const props = defineProps<{
   phoneDisplay: string
   phoneHref: string
   telegramChannel: string
+  maxGroup: string
   showHero?: boolean
 }>()
 
@@ -151,6 +152,15 @@ onBeforeUnmount(() => {
           >
             Telegram
           </a>
+          <a
+            class="btn btn-ghost"
+            :href="maxGroup"
+            target="_blank"
+            rel="noopener noreferrer"
+            @click="closeMobileMenu"
+          >
+            MAX
+          </a>
         </div>
         <a class="mobile-phone" :href="phoneHref" @click="closeMobileMenu">{{ phoneDisplay }}</a>
       </div>
@@ -167,6 +177,7 @@ onBeforeUnmount(() => {
         <div class="hero-actions">
           <NuxtLink class="btn btn-primary" to="/#request-form">Оставить заявку</NuxtLink>
           <a class="btn btn-ghost" :href="telegramChannel" target="_blank" rel="noopener noreferrer">Telegram канал</a>
+          <a class="btn btn-ghost" :href="maxGroup" target="_blank" rel="noopener noreferrer">MAX группа</a>
         </div>
         <div class="hero-contacts">
           <a :href="phoneHref">{{ phoneDisplay }}</a>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount } from 'vue'
+import { computed, onBeforeUnmount } from 'vue'
 
 useHead({
   title: 'Админ-панель — МАЛИНА'
@@ -74,6 +74,10 @@ const desserts = ref<AdminDessert[]>([])
 const photos = ref<AdminPhoto[]>([])
 const reviews = ref<AdminReview[]>([])
 const orders = ref<AdminOrder[]>([])
+const categoryOptions = computed(() =>
+  [...new Set(desserts.value.map((item) => item.category.trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'ru-RU'))
+)
 
 const status = ref('')
 const statusIsError = ref(false)
@@ -509,6 +513,10 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="site-main">
+    <datalist id="dessert-categories">
+      <option v-for="category in categoryOptions" :key="category" :value="category" />
+    </datalist>
+
     <section class="section admin-toolbar reveal-up">
       <h1>Админ-панель</h1>
       <p>Полное редактирование каталога, галереи, отзывов и просмотр заявок.</p>
@@ -526,7 +534,7 @@ onBeforeUnmount(() => {
       <div class="admin-grid admin-grid-2">
         <input v-model.trim="newDessert.slug" type="text" placeholder="slug" />
         <input v-model.trim="newDessert.name" type="text" placeholder="Название" />
-        <input v-model.trim="newDessert.category" type="text" placeholder="Категория" />
+        <input v-model.trim="newDessert.category" list="dessert-categories" type="text" placeholder="Категория" />
         <input v-model.trim="newDessert.price" type="text" placeholder="Цена" />
         <input v-model.trim="newDessert.leadTimeHours" type="number" min="0" placeholder="Срок (часы)" />
         <input v-model.trim="newDessert.proteins" type="text" placeholder="Белки" />
@@ -545,7 +553,6 @@ onBeforeUnmount(() => {
         </p>
       </div>
       <textarea v-model.trim="newDessert.description" rows="2" placeholder="Описание" />
-      <textarea v-model.trim="newDessert.inside" rows="2" placeholder="Состав" />
       <textarea v-model.trim="newDessert.decor" rows="2" placeholder="Декор" />
       <div class="admin-actions">
         <button class="btn btn-primary" type="button" :disabled="isBusy || isCreatingDessert" @click="createDessert">
@@ -564,7 +571,7 @@ onBeforeUnmount(() => {
           <div class="admin-grid admin-grid-3">
             <input v-model.trim="item.slug" type="text" />
             <input v-model.trim="item.name" type="text" />
-            <input v-model.trim="item.category" type="text" />
+            <input v-model.trim="item.category" list="dessert-categories" type="text" />
             <input v-model.trim="item.price" type="text" />
             <input v-model.number="item.leadTimeHours" type="number" min="0" placeholder="Срок (часы)" />
             <label class="admin-checkbox"><input v-model="item.active" type="checkbox" /> Активен</label>
@@ -574,7 +581,6 @@ onBeforeUnmount(() => {
             <input v-model.trim="item.ttk.kbju.kcal" type="text" placeholder="Ккал" />
           </div>
           <textarea v-model.trim="item.description" rows="2" />
-          <textarea v-model.trim="item.inside" rows="2" />
           <textarea v-model.trim="item.decor" rows="2" />
           <div class="admin-actions">
             <button class="btn btn-ghost" type="button" :disabled="isBusy" @click="saveDessert(item)">Сохранить</button>

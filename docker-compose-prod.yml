@@ -38,7 +38,7 @@ services:
       TELEGRAM_REVIEW_CHAT_ID: ${TELEGRAM_REVIEW_CHAT_ID:-}
       TELEGRAM_ADMIN_IDS: ${TELEGRAM_ADMIN_IDS:-502773482,1135012604}
       ADMIN_CREDENTIAL: malinaAdminP
-      PUBLIC_SITE_URL: https://malina.kiruhak11.ru
+      PUBLIC_SITE_URL: https://malina14.ru
     command: sh -c "npm run prisma:generate && npx prisma db push --skip-generate && npm run prisma:seed && node .output/server/index.mjs"
     ports:
       - '127.0.0.1:4015:3000'

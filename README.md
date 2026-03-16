@@ -78,7 +78,7 @@ ports:
 Обязательно задайте в `.env`:
 
 ```bash
-PUBLIC_SITE_URL=https://malina.kiruhak11.ru
+PUBLIC_SITE_URL=https://malina14.ru
 ```
 
 Сервисы в compose:
