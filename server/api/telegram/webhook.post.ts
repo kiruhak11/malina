@@ -4,7 +4,8 @@ import { readBody } from 'h3'
 import { createAdminAccessLink } from '../../utils/admin-auth'
 import { prisma } from '../../utils/prisma'
 import { getAdminTelegramIds } from '../../utils/telegram-targets'
-import { fetchTelegramFile, saveTelegramImage, sendTelegramMessage, telegramRequest } from '../../utils/telegram'
+import { fetchTelegramFile, sendTelegramMessage, telegramRequest } from '../../utils/telegram'
+import { writeUploadFile } from '../../utils/uploads'
 
 type TelegramMessage = {
   message_id: number
@@ -369,10 +370,7 @@ export default defineEventHandler(async (event) => {
     const normalizedExtension = allowedPhotoExtensions.has(extension) ? extension : '.jpg'
     const base = basename(filePath, extension)
     const filename = `${Date.now()}-${base}${normalizedExtension}`
-    const absTarget = `${process.cwd()}/public/uploads/telegram/${filename}`
-    const publicPath = `/uploads/telegram/${filename}`
-
-    await saveTelegramImage(data, absTarget)
+    const { publicPath } = await writeUploadFile('telegram', filename, data)
 
     const createdPhoto = await prisma.photo.create({
       data: {

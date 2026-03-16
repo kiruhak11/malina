@@ -45,6 +45,8 @@ services:
     volumes:
       - uploads-telegram:/app/public/uploads/telegram
       - uploads-admin:/app/public/uploads/admin
+      - uploads-telegram:/app/.output/public/uploads/telegram
+      - uploads-admin:/app/.output/public/uploads/admin
 
   bot:
     build:

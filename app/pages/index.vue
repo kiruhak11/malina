@@ -3,14 +3,11 @@ import { computed, nextTick, reactive, ref } from 'vue'
 import type { Product, Review } from '~/types/site'
 import { maxGroup, phoneDisplay, phoneHref, telegramChannel } from '~/data/siteData'
 
-useHead({
+useSiteSeo({
   title: 'МАЛИНА — десерты на заказ',
-  meta: [
-    {
-      name: 'description',
-      content: 'МАЛИНА — десерты на заказ: меренговые рулеты, зефирные букеты, наборы и индивидуальные заявки.'
-    }
-  ]
+  description: 'МАЛИНА — десерты на заказ: меренговые рулеты, зефирные букеты, наборы и индивидуальные заявки.',
+  path: '/',
+  imagePath: '/logo-malina.png'
 })
 
 type SitePublicPayload = {

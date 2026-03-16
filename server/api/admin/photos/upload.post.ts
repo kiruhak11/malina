@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
 import { PhotoSource } from '@prisma/client'
 import { readMultipartFormData } from 'h3'
 import { requireAdmin } from '../../../utils/admin-auth'
 import { assertMaxLength, sanitizeText } from '../../../utils/input'
 import { prisma } from '../../../utils/prisma'
+import { writeUploadFile } from '../../../utils/uploads'
 
 const sanitize = (value: unknown) => sanitizeText(value)
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024
@@ -81,11 +81,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const filename = `${Date.now()}-${randomUUID().slice(0, 8)}${extension}`
-  const absolutePath = `${process.cwd()}/public/uploads/admin/${filename}`
-  const publicPath = `/uploads/admin/${filename}`
-
-  await mkdir(`${process.cwd()}/public/uploads/admin`, { recursive: true })
-  await writeFile(absolutePath, file.data)
+  const { publicPath } = await writeUploadFile('admin', filename, file.data)
 
   const created = await prisma.photo.create({
     data: {

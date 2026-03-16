@@ -1,45 +1,53 @@
 <script setup lang="ts">
 useHead({
-  title: 'Вход в админ-панель — МАЛИНА'
-})
+  title: "Вход в админ-панель — МАЛИНА",
+});
+
+useSeoMeta({
+  robots: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+  googlebot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+});
 
 const form = reactive({
-  login: '',
-  password: ''
-})
+  login: "",
+  password: "",
+});
 
-const status = ref('')
-const isSubmitting = ref(false)
+const status = ref("");
+const isSubmitting = ref(false);
 
-const authFetch = process.server ? useRequestFetch() : $fetch
-const session = await authFetch<{ authenticated: boolean }>('/api/admin/session').catch(() => ({ authenticated: false }))
+const authFetch = process.server ? useRequestFetch() : $fetch;
+const session = await authFetch<{ authenticated: boolean }>(
+  "/api/admin/session",
+).catch(() => ({ authenticated: false }));
 if (session.authenticated) {
-  await navigateTo('/admin')
+  await navigateTo("/admin");
 }
 
 const submit = async () => {
-  status.value = ''
-  isSubmitting.value = true
+  status.value = "";
+  isSubmitting.value = true;
 
   try {
-    await $fetch('/api/admin/login', {
-      method: 'POST',
+    await $fetch("/api/admin/login", {
+      method: "POST",
       body: {
         login: form.login,
-        password: form.password
-      }
-    })
+        password: form.password,
+      },
+    });
 
-    await navigateTo('/admin')
+    await navigateTo("/admin");
   } catch (error: unknown) {
     const statusMessage =
-      (error as { data?: { statusMessage?: string }; statusMessage?: string })?.data?.statusMessage ||
-      (error as { statusMessage?: string })?.statusMessage
-    status.value = statusMessage || 'Неверный логин или пароль.'
+      (error as { data?: { statusMessage?: string }; statusMessage?: string })
+        ?.data?.statusMessage ||
+      (error as { statusMessage?: string })?.statusMessage;
+    status.value = statusMessage || "Неверный логин или пароль.";
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false;
   }
-}
+};
 </script>
 
 <template>
@@ -51,21 +59,37 @@ const submit = async () => {
       <form class="form form-shell" @submit.prevent="submit">
         <label class="field">
           <span class="field-label">Логин</span>
-          <input v-model.trim="form.login" type="text" placeholder="malinaAdminP" required />
+          <input
+            v-model.trim="form.login"
+            type="text"
+            placeholder="Login"
+            required
+          />
         </label>
         <label class="field">
           <span class="field-label">Пароль</span>
-          <input v-model.trim="form.password" type="password" placeholder="malinaAdminP" required />
+          <input
+            v-model.trim="form.password"
+            type="password"
+            placeholder="Password"
+            required
+          />
         </label>
 
         <div class="submit-row">
           <p class="submit-hint">Доступ только для администратора.</p>
-          <button class="btn btn-primary" type="submit" :disabled="isSubmitting">
-            {{ isSubmitting ? 'Проверка...' : 'Войти' }}
+          <button
+            class="btn btn-primary"
+            type="submit"
+            :disabled="isSubmitting"
+          >
+            {{ isSubmitting ? "Проверка..." : "Войти" }}
           </button>
         </div>
 
-        <p class="status" :class="status ? 'status--error' : ''">{{ status }}</p>
+        <p class="status" :class="status ? 'status--error' : ''">
+          {{ status }}
+        </p>
       </form>
     </section>
   </main>

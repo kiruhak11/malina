@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, unlink, writeFile } from 'node:fs/promises'
+import { unlink } from 'node:fs/promises'
 import { PhotoSource } from '@prisma/client'
 import { getHeader, readBody, readMultipartFormData } from 'h3'
 import { requireAdmin } from '../../utils/admin-auth'
 import { assertMaxLength, sanitizeText } from '../../utils/input'
 import { prisma } from '../../utils/prisma'
+import { writeUploadFile } from '../../utils/uploads'
 
 type DessertPayload = {
   slug?: unknown
@@ -169,7 +170,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const leadTimeHours = parseLeadTime(body.leadTimeHours)
-  let storedFileAbsolutePath: string | null = null
+  let storedFileAbsolutePaths: string[] = []
 
   try {
     const created = await prisma.$transaction(async (tx) => {
@@ -193,11 +194,9 @@ export default defineEventHandler(async (event) => {
 
       if (uploadedPhoto) {
         const filename = `${Date.now()}-${randomUUID().slice(0, 8)}${uploadedPhoto.extension}`
-        storedFileAbsolutePath = `${process.cwd()}/public/uploads/admin/${filename}`
-        const publicPath = `/uploads/admin/${filename}`
-
-        await mkdir(`${process.cwd()}/public/uploads/admin`, { recursive: true })
-        await writeFile(storedFileAbsolutePath, uploadedPhoto.data)
+        const savedFile = await writeUploadFile('admin', filename, uploadedPhoto.data)
+        const publicPath = savedFile.publicPath
+        storedFileAbsolutePaths = savedFile.absolutePaths
 
         await tx.photo.create({
           data: {
@@ -222,8 +221,8 @@ export default defineEventHandler(async (event) => {
 
     return { ok: true, dessert: created }
   } catch (error: unknown) {
-    if (storedFileAbsolutePath) {
-      await unlink(storedFileAbsolutePath).catch(() => {})
+    if (storedFileAbsolutePaths.length) {
+      await Promise.all(storedFileAbsolutePaths.map((path) => unlink(path).catch(() => {})))
     }
 
     if ((error as { code?: string })?.code === 'P2002') {

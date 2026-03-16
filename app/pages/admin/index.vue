@@ -5,6 +5,11 @@ useHead({
   title: 'Админ-панель — МАЛИНА'
 })
 
+useSeoMeta({
+  robots: 'noindex, nofollow, noarchive, nosnippet, noimageindex',
+  googlebot: 'noindex, nofollow, noarchive, nosnippet, noimageindex'
+})
+
 type AdminDessert = {
   id: string
   slug: string
@@ -521,6 +526,7 @@ onBeforeUnmount(() => {
       <h1>Админ-панель</h1>
       <p>Полное редактирование каталога, галереи, отзывов и просмотр заявок.</p>
       <div class="admin-toolbar-actions">
+        <NuxtLink class="btn btn-ghost" to="/">На главный экран</NuxtLink>
         <button class="btn btn-ghost" type="button" :disabled="isBusy" @click="refreshAll">Обновить</button>
         <button class="btn btn-primary" type="button" @click="logout">Выйти</button>
       </div>

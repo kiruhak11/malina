@@ -1,6 +1,9 @@
 <script setup lang="ts">
-useHead({
-  title: 'Галерея — МАЛИНА'
+useSiteSeo({
+  title: 'Галерея десертов — МАЛИНА',
+  description: 'Галерея десертов МАЛИНА: фото рулетов, зефира и наборов, выполненных на заказ.',
+  path: '/gallery',
+  imagePath: '/logo-malina.png'
 })
 
 type GalleryPayload = {

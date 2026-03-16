@@ -2,6 +2,16 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: process.env.NODE_ENV !== 'production' },
+  app: {
+    head: {
+      htmlAttrs: {
+        lang: 'ru'
+      },
+      link: [
+        { rel: 'icon', type: 'image/png', href: '/favicon.png' }
+      ]
+    }
+  },
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -11,6 +21,10 @@ export default defineNuxtConfig({
     telegramAdminIds: process.env.TELEGRAM_ADMIN_IDS || process.env.TG_ADMIN_IDS,
     adminCredential: process.env.ADMIN_CREDENTIAL || 'malinaAdminP',
     adminSessionDays: Number(process.env.ADMIN_SESSION_DAYS || 14),
-    publicSiteUrl: process.env.PUBLIC_SITE_URL || ''
+    publicSiteUrl: process.env.PUBLIC_SITE_URL || '',
+    public: {
+      siteName: 'МАЛИНА',
+      siteUrl: process.env.PUBLIC_SITE_URL || ''
+    }
   }
 })
