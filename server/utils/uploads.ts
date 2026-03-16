@@ -6,6 +6,21 @@ const getUploadRoots = () => {
   return [...new Set(roots)]
 }
 
+const UPLOAD_RELATIVE_SEGMENT_RE = /^[A-Za-z0-9._-]+$/
+
+export const isSafeUploadRelativePath = (value: string) => {
+  const normalized = value.replace(/^\/+/, '').replace(/\\/g, '/')
+
+  if (!normalized || normalized.includes('..') || normalized.includes('\0')) {
+    return false
+  }
+
+  return normalized.split('/').every((segment) => Boolean(segment) && UPLOAD_RELATIVE_SEGMENT_RE.test(segment))
+}
+
+export const resolveUploadReadCandidates = (relativePath: string) =>
+  getUploadRoots().map((root) => resolve(root, relativePath))
+
 export const buildUploadPublicPath = (scope: string, filename: string) => `/uploads/${scope}/${filename}`
 
 export const writeUploadFile = async (scope: string, filename: string, data: Buffer) => {
