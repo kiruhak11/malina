@@ -63,7 +63,9 @@ type DashboardResponse = {
   orders: AdminOrder[]
 }
 
-const session = await $fetch<{ authenticated: boolean }>('/api/admin/session').catch(() => ({ authenticated: false }))
+const authFetch = process.server ? useRequestFetch() : $fetch
+
+const session = await authFetch<{ authenticated: boolean }>('/api/admin/session').catch(() => ({ authenticated: false }))
 if (!session.authenticated) {
   await navigateTo('/admin/login')
 }
@@ -91,14 +93,11 @@ const newDessert = reactive({
   carbs: '',
   kcal: ''
 })
-
-const newPhoto = reactive({
-  path: '',
-  title: '',
-  dessertSlug: '',
-  inGallery: true,
-  source: 'admin' as 'seed' | 'telegram' | 'admin'
-})
+const newDessertPhotoFile = ref<File | null>(null)
+const newDessertPhotoPreviewUrl = ref('')
+const newDessertPhotoTitle = ref('')
+const newDessertPhotoInput = ref<HTMLInputElement | null>(null)
+const isCreatingDessert = ref(false)
 
 const uploadPhoto = reactive({
   title: '',
@@ -132,7 +131,7 @@ const applyDashboard = (payload: DashboardResponse) => {
 const loadDashboard = async () => {
   isBusy.value = true
   try {
-    const payload = await $fetch<DashboardResponse>('/api/admin/dashboard')
+    const payload = await authFetch<DashboardResponse>('/api/admin/dashboard')
     applyDashboard(payload)
   } catch (error: unknown) {
     const statusCode =
@@ -168,6 +167,58 @@ const setStatus = (message: string, isError = false) => {
   }, 2400)
 }
 
+const extractStatusMessage = (error: unknown, fallback: string) => {
+  const statusMessage =
+    (error as { data?: { statusMessage?: string }; statusMessage?: string })?.data?.statusMessage ||
+    (error as { statusMessage?: string })?.statusMessage
+
+  return statusMessage || fallback
+}
+
+const onDessertPhotoChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  newDessertPhotoFile.value = target.files?.[0] || null
+
+  if (newDessertPhotoPreviewUrl.value) {
+    URL.revokeObjectURL(newDessertPhotoPreviewUrl.value)
+    newDessertPhotoPreviewUrl.value = ''
+  }
+
+  if (newDessertPhotoFile.value) {
+    newDessertPhotoPreviewUrl.value = URL.createObjectURL(newDessertPhotoFile.value)
+  }
+}
+
+const resetDessertPhoto = () => {
+  newDessertPhotoFile.value = null
+  newDessertPhotoTitle.value = ''
+
+  if (newDessertPhotoPreviewUrl.value) {
+    URL.revokeObjectURL(newDessertPhotoPreviewUrl.value)
+    newDessertPhotoPreviewUrl.value = ''
+  }
+
+  if (newDessertPhotoInput.value) {
+    newDessertPhotoInput.value.value = ''
+  }
+}
+
+const resetNewDessertForm = () => {
+  newDessert.slug = ''
+  newDessert.category = ''
+  newDessert.name = ''
+  newDessert.description = ''
+  newDessert.inside = ''
+  newDessert.decor = ''
+  newDessert.price = ''
+  newDessert.leadTimeHours = ''
+  newDessert.proteins = ''
+  newDessert.fats = ''
+  newDessert.carbs = ''
+  newDessert.kcal = ''
+  resetDessertPhoto()
+}
+
 const logout = async () => {
   await $fetch('/api/admin/logout', { method: 'POST' })
   await navigateTo('/admin/login')
@@ -177,8 +228,8 @@ const refreshAll = async () => {
   try {
     await loadDashboard()
     setStatus('Данные обновлены.')
-  } catch {
-    setStatus('Не удалось обновить данные.', true)
+  } catch (error: unknown) {
+    setStatus(extractStatusMessage(error, 'Не удалось обновить данные.'), true)
   }
 }
 
@@ -207,88 +258,82 @@ const saveDessert = async (item: AdminDessert) => {
       }
     })
     setStatus(`Десерт ${item.name} сохранен.`)
-  } catch {
-    setStatus(`Ошибка сохранения десерта ${item.name}.`, true)
+  } catch (error: unknown) {
+    setStatus(extractStatusMessage(error, `Ошибка сохранения десерта ${item.name}.`), true)
   }
 }
 
 const createDessert = async () => {
+  isCreatingDessert.value = true
   try {
-    await $fetch('/api/admin/desserts', {
-      method: 'POST',
-      body: {
-        slug: newDessert.slug,
-        category: newDessert.category,
-        name: newDessert.name,
-        description: newDessert.description,
-        inside: newDessert.inside,
-        decor: newDessert.decor,
-        price: newDessert.price,
-        leadTimeHours: newDessert.leadTimeHours ? Number(newDessert.leadTimeHours) : null,
-        ttk: {
-          kbju: {
-            proteins: newDessert.proteins,
-            fats: newDessert.fats,
-            carbs: newDessert.carbs,
-            kcal: newDessert.kcal
+    if (newDessertPhotoFile.value) {
+      const formData = new FormData()
+      formData.append('slug', newDessert.slug)
+      formData.append('category', newDessert.category)
+      formData.append('name', newDessert.name)
+      formData.append('description', newDessert.description)
+      formData.append('inside', newDessert.inside)
+      formData.append('decor', newDessert.decor)
+      formData.append('price', newDessert.price)
+      formData.append('leadTimeHours', newDessert.leadTimeHours)
+      formData.append('active', 'true')
+      formData.append('ttkProteins', newDessert.proteins)
+      formData.append('ttkFats', newDessert.fats)
+      formData.append('ttkCarbs', newDessert.carbs)
+      formData.append('ttkKcal', newDessert.kcal)
+      formData.append('photoTitle', newDessertPhotoTitle.value)
+      formData.append('photoInGallery', 'true')
+      formData.append('file', newDessertPhotoFile.value)
+
+      await $fetch('/api/admin/desserts', {
+        method: 'POST',
+        body: formData
+      })
+    } else {
+      await $fetch('/api/admin/desserts', {
+        method: 'POST',
+        body: {
+          slug: newDessert.slug,
+          category: newDessert.category,
+          name: newDessert.name,
+          description: newDessert.description,
+          inside: newDessert.inside,
+          decor: newDessert.decor,
+          price: newDessert.price,
+          leadTimeHours: newDessert.leadTimeHours ? Number(newDessert.leadTimeHours) : null,
+          ttk: {
+            kbju: {
+              proteins: newDessert.proteins,
+              fats: newDessert.fats,
+              carbs: newDessert.carbs,
+              kcal: newDessert.kcal
+            }
           }
         }
-      }
-    })
+      })
+    }
 
-    newDessert.slug = ''
-    newDessert.category = ''
-    newDessert.name = ''
-    newDessert.description = ''
-    newDessert.inside = ''
-    newDessert.decor = ''
-    newDessert.price = ''
-    newDessert.leadTimeHours = ''
-    newDessert.proteins = ''
-    newDessert.fats = ''
-    newDessert.carbs = ''
-    newDessert.kcal = ''
+    resetNewDessertForm()
 
     await loadDashboard()
     setStatus('Новый десерт добавлен.')
-  } catch {
-    setStatus('Не удалось добавить десерт.', true)
+  } catch (error: unknown) {
+    setStatus(extractStatusMessage(error, 'Не удалось добавить десерт.'), true)
+  } finally {
+    isCreatingDessert.value = false
   }
 }
 
 const removeDessert = async (id: string) => {
+  if (!confirm('Удалить десерт? Действие необратимо.')) {
+    return
+  }
   try {
     await $fetch(`/api/admin/desserts/${id}`, { method: 'DELETE' })
     await loadDashboard()
     setStatus('Десерт удален.')
-  } catch {
-    setStatus('Не удалось удалить десерт.', true)
-  }
-}
-
-const createPhoto = async () => {
-  try {
-    await $fetch('/api/admin/photos', {
-      method: 'POST',
-      body: {
-        path: newPhoto.path,
-        title: newPhoto.title,
-        dessertSlug: newPhoto.dessertSlug || null,
-        inGallery: newPhoto.inGallery,
-        source: newPhoto.source
-      }
-    })
-
-    newPhoto.path = ''
-    newPhoto.title = ''
-    newPhoto.dessertSlug = ''
-    newPhoto.inGallery = true
-    newPhoto.source = 'admin'
-
-    await loadDashboard()
-    setStatus('Фото добавлено.')
-  } catch {
-    setStatus('Не удалось добавить фото.', true)
+  } catch (error: unknown) {
+    setStatus(extractStatusMessage(error, 'Не удалось удалить десерт.'), true)
   }
 }
 
@@ -352,8 +397,8 @@ const uploadPhotoByFile = async () => {
     resetUploadForm()
     await loadDashboard()
     setStatus('Фото загружено файлом.')
-  } catch {
-    setStatus('Не удалось загрузить фото файлом.', true)
+  } catch (error: unknown) {
+    setStatus(extractStatusMessage(error, 'Не удалось загрузить фото файлом.'), true)
   } finally {
     isUploadingPhoto.value = false
   }
@@ -372,18 +417,21 @@ const savePhoto = async (item: AdminPhoto) => {
       }
     })
     setStatus(`Фото ${item.id} сохранено.`)
-  } catch {
-    setStatus(`Ошибка сохранения фото ${item.id}.`, true)
+  } catch (error: unknown) {
+    setStatus(extractStatusMessage(error, `Ошибка сохранения фото ${item.id}.`), true)
   }
 }
 
 const removePhoto = async (id: string) => {
+  if (!confirm('Удалить фото? Действие необратимо.')) {
+    return
+  }
   try {
     await $fetch(`/api/admin/photos/${id}`, { method: 'DELETE' })
     await loadDashboard()
     setStatus('Фото удалено.')
-  } catch {
-    setStatus('Не удалось удалить фото.', true)
+  } catch (error: unknown) {
+    setStatus(extractStatusMessage(error, 'Не удалось удалить фото.'), true)
   }
 }
 
@@ -400,8 +448,8 @@ const saveReview = async (item: AdminReview) => {
       }
     })
     setStatus(`Отзыв ${item.id} сохранен.`)
-  } catch {
-    setStatus(`Ошибка сохранения отзыва ${item.id}.`, true)
+  } catch (error: unknown) {
+    setStatus(extractStatusMessage(error, `Ошибка сохранения отзыва ${item.id}.`), true)
   }
 }
 
@@ -410,8 +458,8 @@ const approveReview = async (id: string) => {
     await $fetch(`/api/admin/reviews/${id}/approve`, { method: 'POST' })
     await loadDashboard()
     setStatus('Отзыв подтвержден.')
-  } catch {
-    setStatus('Не удалось подтвердить отзыв.', true)
+  } catch (error: unknown) {
+    setStatus(extractStatusMessage(error, 'Не удалось подтвердить отзыв.'), true)
   }
 }
 
@@ -420,18 +468,21 @@ const rejectReview = async (id: string) => {
     await $fetch(`/api/admin/reviews/${id}/reject`, { method: 'POST' })
     await loadDashboard()
     setStatus('Отзыв отклонен.')
-  } catch {
-    setStatus('Не удалось отклонить отзыв.', true)
+  } catch (error: unknown) {
+    setStatus(extractStatusMessage(error, 'Не удалось отклонить отзыв.'), true)
   }
 }
 
 const removeReview = async (id: string) => {
+  if (!confirm('Удалить отзыв? Действие необратимо.')) {
+    return
+  }
   try {
     await $fetch(`/api/admin/reviews/${id}`, { method: 'DELETE' })
     await loadDashboard()
     setStatus('Отзыв удален.')
-  } catch {
-    setStatus('Не удалось удалить отзыв.', true)
+  } catch (error: unknown) {
+    setStatus(extractStatusMessage(error, 'Не удалось удалить отзыв.'), true)
   }
 }
 
@@ -441,14 +492,17 @@ const formatDate = (value: string) =>
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC'
+    minute: '2-digit'
   }).format(new Date(value))
 
 onBeforeUnmount(() => {
   if (uploadPreviewUrl.value) {
     URL.revokeObjectURL(uploadPreviewUrl.value)
     uploadPreviewUrl.value = ''
+  }
+  if (newDessertPhotoPreviewUrl.value) {
+    URL.revokeObjectURL(newDessertPhotoPreviewUrl.value)
+    newDessertPhotoPreviewUrl.value = ''
   }
 })
 </script>
@@ -462,7 +516,9 @@ onBeforeUnmount(() => {
         <button class="btn btn-ghost" type="button" :disabled="isBusy" @click="refreshAll">Обновить</button>
         <button class="btn btn-primary" type="button" @click="logout">Выйти</button>
       </div>
-      <p class="status" :class="status ? (statusIsError ? 'status--error' : 'status--success') : ''">{{ status }}</p>
+      <p class="status" :class="status ? (statusIsError ? 'status--error' : 'status--success') : ''" role="status" aria-live="polite">
+        {{ status }}
+      </p>
     </section>
 
     <section class="section admin-section reveal-up">
@@ -472,17 +528,32 @@ onBeforeUnmount(() => {
         <input v-model.trim="newDessert.name" type="text" placeholder="Название" />
         <input v-model.trim="newDessert.category" type="text" placeholder="Категория" />
         <input v-model.trim="newDessert.price" type="text" placeholder="Цена" />
-        <input v-model.trim="newDessert.leadTimeHours" type="number" placeholder="Срок (часы)" />
+        <input v-model.trim="newDessert.leadTimeHours" type="number" min="0" placeholder="Срок (часы)" />
         <input v-model.trim="newDessert.proteins" type="text" placeholder="Белки" />
         <input v-model.trim="newDessert.fats" type="text" placeholder="Жиры" />
         <input v-model.trim="newDessert.carbs" type="text" placeholder="Углеводы" />
         <input v-model.trim="newDessert.kcal" type="text" placeholder="Ккал" />
       </div>
+      <div class="admin-grid admin-grid-2 admin-upload-grid">
+        <input ref="newDessertPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" @change="onDessertPhotoChange" />
+        <input v-model.trim="newDessertPhotoTitle" type="text" placeholder="Название фото (опционально)" />
+      </div>
+      <div v-if="newDessertPhotoPreviewUrl || newDessertPhotoFile" class="admin-upload-preview">
+        <img v-if="newDessertPhotoPreviewUrl" :src="newDessertPhotoPreviewUrl" alt="Предпросмотр фото десерта" />
+        <p v-if="newDessertPhotoFile">
+          {{ newDessertPhotoFile.name }} · {{ Math.ceil(newDessertPhotoFile.size / 1024) }} KB
+        </p>
+      </div>
       <textarea v-model.trim="newDessert.description" rows="2" placeholder="Описание" />
       <textarea v-model.trim="newDessert.inside" rows="2" placeholder="Состав" />
       <textarea v-model.trim="newDessert.decor" rows="2" placeholder="Декор" />
       <div class="admin-actions">
-        <button class="btn btn-primary" type="button" @click="createDessert">Добавить десерт</button>
+        <button class="btn btn-primary" type="button" :disabled="isBusy || isCreatingDessert" @click="createDessert">
+          {{ isCreatingDessert ? 'Сохранение...' : 'Добавить десерт' }}
+        </button>
+        <button class="btn btn-ghost" type="button" :disabled="isBusy || isCreatingDessert" @click="resetNewDessertForm">
+          Очистить
+        </button>
       </div>
     </section>
 
@@ -495,7 +566,7 @@ onBeforeUnmount(() => {
             <input v-model.trim="item.name" type="text" />
             <input v-model.trim="item.category" type="text" />
             <input v-model.trim="item.price" type="text" />
-            <input v-model.number="item.leadTimeHours" type="number" placeholder="Срок (часы)" />
+            <input v-model.number="item.leadTimeHours" type="number" min="0" placeholder="Срок (часы)" />
             <label class="admin-checkbox"><input v-model="item.active" type="checkbox" /> Активен</label>
             <input v-model.trim="item.ttk.kbju.proteins" type="text" placeholder="Белки" />
             <input v-model.trim="item.ttk.kbju.fats" type="text" placeholder="Жиры" />
@@ -506,8 +577,8 @@ onBeforeUnmount(() => {
           <textarea v-model.trim="item.inside" rows="2" />
           <textarea v-model.trim="item.decor" rows="2" />
           <div class="admin-actions">
-            <button class="btn btn-ghost" type="button" @click="saveDessert(item)">Сохранить</button>
-            <button class="btn btn-primary" type="button" @click="removeDessert(item.id)">Удалить</button>
+            <button class="btn btn-ghost" type="button" :disabled="isBusy" @click="saveDessert(item)">Сохранить</button>
+            <button class="btn btn-primary" type="button" :disabled="isBusy" @click="removeDessert(item.id)">Удалить</button>
           </div>
         </article>
       </div>
@@ -515,8 +586,9 @@ onBeforeUnmount(() => {
 
     <section class="section admin-section reveal-up">
       <h2>Добавить фото</h2>
+      <p class="submit-hint">Загрузка новых фото доступна только через файл.</p>
       <div class="admin-grid admin-grid-2 admin-upload-grid">
-        <input ref="uploadFileInput" type="file" accept="image/*" @change="onUploadFileChange" />
+        <input ref="uploadFileInput" type="file" accept="image/jpeg,image/png,image/webp" @change="onUploadFileChange" />
         <input v-model.trim="uploadPhoto.title" type="text" placeholder="Название фото (для файла)" />
         <input v-model.trim="uploadPhoto.dessertSlug" type="text" placeholder="slug десерта или пусто (для файла)" />
         <select v-model="uploadPhoto.source">
@@ -533,27 +605,12 @@ onBeforeUnmount(() => {
         </p>
       </div>
       <div class="admin-actions">
-        <button class="btn btn-primary" type="button" :disabled="isUploadingPhoto" @click="uploadPhotoByFile">
+        <button class="btn btn-primary" type="button" :disabled="isBusy || isUploadingPhoto" @click="uploadPhotoByFile">
           {{ isUploadingPhoto ? 'Загрузка...' : 'Загрузить файлом' }}
         </button>
-        <button class="btn btn-ghost" type="button" :disabled="isUploadingPhoto" @click="resetUploadForm">Очистить</button>
+        <button class="btn btn-ghost" type="button" :disabled="isBusy || isUploadingPhoto" @click="resetUploadForm">Очистить</button>
       </div>
 
-      <p class="submit-hint">Или добавление по готовому пути:</p>
-      <div class="admin-grid admin-grid-2">
-        <input v-model.trim="newPhoto.path" type="text" placeholder="/uploads/..." />
-        <input v-model.trim="newPhoto.title" type="text" placeholder="Название фото" />
-        <input v-model.trim="newPhoto.dessertSlug" type="text" placeholder="slug десерта или пусто" />
-        <select v-model="newPhoto.source">
-          <option value="admin">admin</option>
-          <option value="seed">seed</option>
-          <option value="telegram">telegram</option>
-        </select>
-        <label class="admin-checkbox"><input v-model="newPhoto.inGallery" type="checkbox" /> Показывать в галерее</label>
-      </div>
-      <div class="admin-actions">
-        <button class="btn btn-primary" type="button" @click="createPhoto">Добавить фото</button>
-      </div>
     </section>
 
     <section class="section admin-section reveal-up">
@@ -572,8 +629,8 @@ onBeforeUnmount(() => {
             <label class="admin-checkbox"><input v-model="item.inGallery" type="checkbox" /> В галерее</label>
           </div>
           <div class="admin-actions">
-            <button class="btn btn-ghost" type="button" @click="savePhoto(item)">Сохранить</button>
-            <button class="btn btn-primary" type="button" @click="removePhoto(item.id)">Удалить</button>
+            <button class="btn btn-ghost" type="button" :disabled="isBusy" @click="savePhoto(item)">Сохранить</button>
+            <button class="btn btn-primary" type="button" :disabled="isBusy" @click="removePhoto(item.id)">Удалить</button>
           </div>
         </article>
       </div>
@@ -586,15 +643,15 @@ onBeforeUnmount(() => {
           <div class="admin-grid admin-grid-3">
             <input v-model.trim="item.name" type="text" />
             <input v-model.trim="item.phone" type="text" placeholder="Телефон" />
-            <input v-model.number="item.rating" type="number" min="1" max="5" />
+            <input v-model.number="item.rating" type="number" min="1" max="5" step="1" />
             <label class="admin-checkbox"><input v-model="item.approved" type="checkbox" /> Одобрен</label>
           </div>
           <textarea v-model.trim="item.text" rows="3" />
           <div class="admin-actions admin-actions-wide">
-            <button class="btn btn-ghost" type="button" @click="saveReview(item)">Сохранить</button>
-            <button class="btn btn-ghost" type="button" @click="approveReview(item.id)">Принять</button>
-            <button class="btn btn-ghost" type="button" @click="rejectReview(item.id)">Отклонить</button>
-            <button class="btn btn-primary" type="button" @click="removeReview(item.id)">Удалить</button>
+            <button class="btn btn-ghost" type="button" :disabled="isBusy" @click="saveReview(item)">Сохранить</button>
+            <button class="btn btn-ghost" type="button" :disabled="isBusy" @click="approveReview(item.id)">Принять</button>
+            <button class="btn btn-ghost" type="button" :disabled="isBusy" @click="rejectReview(item.id)">Отклонить</button>
+            <button class="btn btn-primary" type="button" :disabled="isBusy" @click="removeReview(item.id)">Удалить</button>
           </div>
         </article>
       </div>
@@ -610,7 +667,7 @@ onBeforeUnmount(() => {
           <p><strong>Десерт:</strong> {{ order.dessert }}</p>
           <p><strong>Дата заказа:</strong> {{ order.orderDate }}</p>
           <p><strong>Комментарий:</strong> {{ order.details || 'нет данных' }}</p>
-          <p><strong>Создано:</strong> {{ formatDate(order.createdAt) }} UTC</p>
+          <p><strong>Создано:</strong> {{ formatDate(order.createdAt) }}</p>
         </article>
       </div>
     </section>

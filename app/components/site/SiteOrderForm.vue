@@ -11,6 +11,7 @@ const props = defineProps<{
   }
   status: string
   isSubmitting: boolean
+  minOrderDate: string
 }>()
 
 const emit = defineEmits<{
@@ -34,25 +35,41 @@ const statusClass = computed(() => {
     <form class="form form-shell" @submit.prevent="emit('submit')">
       <label class="field">
         <span class="field-label">Имя</span>
-        <input v-model.trim="form.name" type="text" placeholder="Ваше имя" required />
+        <input v-model.trim="form.name" type="text" placeholder="Ваше имя" autocomplete="name" maxlength="80" required />
       </label>
       <label class="field">
         <span class="field-label">Телефон</span>
-        <input v-model.trim="form.phone" type="tel" placeholder="8 (___) ___-__-__" required />
+        <input
+          v-model.trim="form.phone"
+          type="tel"
+          placeholder="8 (___) ___-__-__"
+          autocomplete="tel"
+          inputmode="tel"
+          maxlength="32"
+          required
+        />
       </label>
       <label class="field">
         <span class="field-label">Выбранный десерт</span>
-        <input v-model.trim="form.dessert" type="text" placeholder="Например, Фисташка и малина" required />
+        <input
+          id="order-dessert"
+          v-model.trim="form.dessert"
+          type="text"
+          placeholder="Например, Фисташка и малина"
+          maxlength="120"
+          required
+        />
       </label>
       <label class="field">
         <span class="field-label">Дата заказа</span>
-        <input v-model="form.orderDate" type="date" required />
+        <input v-model="form.orderDate" type="date" :min="minOrderDate" required />
       </label>
       <label class="field field-full">
         <span class="field-label">Дополнительная информация</span>
         <textarea
           v-model.trim="form.details"
           rows="4"
+          maxlength="1000"
           placeholder="Пожелания по составу, декору, формату подачи"
         />
       </label>

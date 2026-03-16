@@ -1,4 +1,5 @@
 import { prisma } from '../../utils/prisma'
+import { isSafePublicImagePath } from '../../utils/input'
 
 export default defineEventHandler(async () => {
   const [dessertsRaw, reviews, gallery] = await Promise.all([
@@ -62,11 +63,27 @@ export default defineEventHandler(async () => {
           }
         : null,
     photos: dessert.photos
+      .filter((photo) => isSafePublicImagePath(photo.path))
+      .map((photo) => ({
+        id: photo.id,
+        path: photo.path,
+        title: photo.title
+      }))
   }))
+
+  const safeGallery = gallery
+    .filter((photo) => isSafePublicImagePath(photo.path))
+    .map((photo) => ({
+      id: photo.id,
+      path: photo.path,
+      title: photo.title,
+      dessertId: photo.dessertId,
+      createdAt: photo.createdAt
+    }))
 
   return {
     desserts,
     reviews,
-    gallery
+    gallery: safeGallery
   }
 })

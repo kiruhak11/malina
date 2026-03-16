@@ -11,8 +11,9 @@ const form = reactive({
 const status = ref('')
 const isSubmitting = ref(false)
 
-const { data: session } = await useFetch<{ authenticated: boolean }>('/api/admin/session')
-if (session.value?.authenticated) {
+const authFetch = process.server ? useRequestFetch() : $fetch
+const session = await authFetch<{ authenticated: boolean }>('/api/admin/session').catch(() => ({ authenticated: false }))
+if (session.authenticated) {
   await navigateTo('/admin')
 }
 
@@ -30,8 +31,11 @@ const submit = async () => {
     })
 
     await navigateTo('/admin')
-  } catch {
-    status.value = 'Неверный логин или пароль.'
+  } catch (error: unknown) {
+    const statusMessage =
+      (error as { data?: { statusMessage?: string }; statusMessage?: string })?.data?.statusMessage ||
+      (error as { statusMessage?: string })?.statusMessage
+    status.value = statusMessage || 'Неверный логин или пароль.'
   } finally {
     isSubmitting.value = false
   }

@@ -8,6 +8,8 @@ services:
       POSTGRES_PASSWORD: malinaAdminP
     volumes:
       - pg-data:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:5433:5432'
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U malina -d malina"]
       interval: 10s
@@ -34,7 +36,7 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       TELEGRAM_REVIEW_CHAT_ID: ${TELEGRAM_REVIEW_CHAT_ID:-}
-      TELEGRAM_ADMIN_IDS: ${TELEGRAM_ADMIN_IDS:-502773482}
+      TELEGRAM_ADMIN_IDS: ${TELEGRAM_ADMIN_IDS:-502773482,1135012604}
       ADMIN_CREDENTIAL: malinaAdminP
       PUBLIC_SITE_URL: https://malina.kiruhak11.ru
     command: sh -c "npm run prisma:generate && npx prisma db push --skip-generate && npm run prisma:seed && node .output/server/index.mjs"

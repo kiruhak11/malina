@@ -11,8 +11,8 @@ Nuxt 4 сайт с каталогом, модалками ТТК, галерее
   - заявок
 - Админ-панель `/admin` с полным CRUD по десертам/фото/отзывам и просмотром заявок
 - Авторизация админки:
-  - логин: `malinaAdminP`
-  - пароль: `malinaAdminP`
+  - используйте `ADMIN_LOGIN` + `ADMIN_PASSWORD` (рекомендуется)
+  - обратная совместимость: если они не заданы, используются значения `ADMIN_CREDENTIAL`
 - Telegram модерация отзывов:
   - кнопки `Принять` / `Отклонить` прямо под сообщением
   - кнопка с авто-входом в админку
@@ -28,6 +28,8 @@ npm run prisma:seed
 npm run dev
 ```
 
+Если используете PostgreSQL из `docker-compose-prod.yml`, контейнер `db` проброшен на `127.0.0.1:5433`.
+
 ## Переменные окружения
 
 ```bash
@@ -36,15 +38,20 @@ DATABASE_URL=postgresql://malina:malinaAdminP@localhost:5433/malina?schema=publi
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_CHAT_ID=...
 TELEGRAM_REVIEW_CHAT_ID=...
-TELEGRAM_ADMIN_IDS=502773482
+TELEGRAM_ADMIN_IDS=502773482,1135012604
 TELEGRAM_PROXY_URL=http://login:password@host:port
 
 ADMIN_CREDENTIAL=malinaAdminP
+ADMIN_LOGIN=malinaAdminP
+ADMIN_PASSWORD=change-this-password
 ADMIN_SESSION_DAYS=14
 PUBLIC_SITE_URL=http://localhost:3000
 
 # для bot service
 BOT_FORWARD_URL=http://localhost:3000/api/telegram/webhook
+BOT_FORWARD_TIMEOUT_MS=15000
+BOT_FORWARD_ATTEMPTS=4
+TELEGRAM_HTTP_TIMEOUT_MS=25000
 ```
 
 Если на сервере заблокирован прямой доступ к Telegram, задайте `TELEGRAM_PROXY_URL` и перезапустите `web` + `bot`.

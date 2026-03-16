@@ -52,6 +52,9 @@ const inferLeadTimeHours = (category: string) => {
 }
 
 const reviewStateText = (approved: boolean) => (approved ? 'подтвержден' : 'отклонен')
+const allowedPhotoExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp'])
+const MAX_TELEGRAM_PHOTO_BYTES = 15 * 1024 * 1024
+const htmlSafe = (value: string) => value.replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
@@ -154,12 +157,12 @@ export default defineEventHandler(async (event) => {
     '/list_desserts',
     '/add_dessert {"slug":"...","name":"...","category":"...","description":"...","price":"..."}',
     '/update_dessert {"slug":"...","name":"..."}',
-    '/delete_dessert <slug>',
-    '/approve_review <id>',
-    '/reject_review <id>',
-    '/delete_photo <photoId>',
+    `/delete_dessert ${htmlSafe('<slug>')}`,
+    `/approve_review ${htmlSafe('<id>')}`,
+    `/reject_review ${htmlSafe('<id>')}`,
+    `/delete_photo ${htmlSafe('<photoId>')}`,
     'Загрузка фото:',
-    '1) отправьте фото с подписью /add_photo <slug> [заголовок]',
+    `1) отправьте фото с подписью /add_photo ${htmlSafe('<slug>')} [заголовок]`,
     '2) отправьте фото с подписью /add_gallery [заголовок]',
     `Админ-панель: ${adminLink}`
   ].join('\n')
@@ -260,7 +263,7 @@ export default defineEventHandler(async (event) => {
 
   if (command === '/delete_dessert') {
     if (!argText) {
-      await sendTelegramMessage(token, chatId, 'Укажите slug: /delete_dessert <slug>')
+      await sendTelegramMessage(token, chatId, `Укажите slug: /delete_dessert ${htmlSafe('<slug>')}`)
       return { ok: true }
     }
 
@@ -281,7 +284,7 @@ export default defineEventHandler(async (event) => {
 
   if (command === '/approve_review' || command === '/reject_review') {
     if (!argText) {
-      await sendTelegramMessage(token, chatId, `Укажите id: ${command} <id>`)
+      await sendTelegramMessage(token, chatId, `Укажите id: ${command} ${htmlSafe('<id>')}`)
       return { ok: true }
     }
 
@@ -307,7 +310,7 @@ export default defineEventHandler(async (event) => {
 
   if (command === '/delete_photo') {
     if (!argText) {
-      await sendTelegramMessage(token, chatId, 'Укажите id: /delete_photo <photoId>')
+      await sendTelegramMessage(token, chatId, `Укажите id: /delete_photo ${htmlSafe('<photoId>')}`)
       return { ok: true }
     }
 
@@ -330,24 +333,13 @@ export default defineEventHandler(async (event) => {
       return { ok: true }
     }
 
-    const bestPhoto = [...message.photo].sort((a, b) => (b.file_size || 0) - (a.file_size || 0))[0]
-    const { filePath, data } = await fetchTelegramFile(token, bestPhoto.file_id)
-
-    const extension = extname(filePath) || '.jpg'
-    const base = basename(filePath, extension)
-    const filename = `${Date.now()}-${base}${extension}`
-    const absTarget = `${process.cwd()}/public/uploads/telegram/${filename}`
-    const publicPath = `/uploads/telegram/${filename}`
-
-    await saveTelegramImage(data, absTarget)
-
     let dessertId: string | null = null
     let title = 'Фото из Telegram'
 
     if (command === '/add_photo') {
       const [slug, ...titleParts] = args
       if (!slug) {
-        await sendTelegramMessage(token, chatId, 'Укажите slug: /add_photo <slug> [заголовок]')
+        await sendTelegramMessage(token, chatId, `Укажите slug: /add_photo ${htmlSafe('<slug>')} [заголовок]`)
         return { ok: true }
       }
 
@@ -362,8 +354,25 @@ export default defineEventHandler(async (event) => {
     }
 
     if (command === '/add_gallery') {
-      title = argText.replace('/add_gallery', '').trim() || 'Фото для галереи'
+      title = argText.trim() || 'Фото для галереи'
     }
+
+    const bestPhoto = [...message.photo].sort((a, b) => (b.file_size || 0) - (a.file_size || 0))[0]
+    if ((bestPhoto.file_size || 0) > MAX_TELEGRAM_PHOTO_BYTES) {
+      await sendTelegramMessage(token, chatId, 'Файл слишком большой. Максимум 15 МБ.')
+      return { ok: true }
+    }
+
+    const { filePath, data } = await fetchTelegramFile(token, bestPhoto.file_id)
+
+    const extension = extname(filePath).toLowerCase()
+    const normalizedExtension = allowedPhotoExtensions.has(extension) ? extension : '.jpg'
+    const base = basename(filePath, extension)
+    const filename = `${Date.now()}-${base}${normalizedExtension}`
+    const absTarget = `${process.cwd()}/public/uploads/telegram/${filename}`
+    const publicPath = `/uploads/telegram/${filename}`
+
+    await saveTelegramImage(data, absTarget)
 
     const createdPhoto = await prisma.photo.create({
       data: {

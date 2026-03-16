@@ -1,98 +1,119 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{
-  phoneDisplay: string;
-  phoneHref: string;
-  telegramChannel: string;
-  showHero?: boolean;
-}>();
+  phoneDisplay: string
+  phoneHref: string
+  telegramChannel: string
+  showHero?: boolean
+}>()
 
-const isMobileMenuOpen = ref(false);
+const route = useRoute()
+const isMobileMenuOpen = ref(false)
+const activeSlide = ref(0)
+let slideTimer: ReturnType<typeof setInterval> | null = null
 
 const toggleMobileMenu = () => {
-  isMobileMenuOpen.value = !isMobileMenuOpen.value;
-};
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
 
 const closeMobileMenu = () => {
-  isMobileMenuOpen.value = false;
-};
+  isMobileMenuOpen.value = false
+}
+
+const onEscape = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    closeMobileMenu()
+  }
+}
+
+const stopSlideTimer = () => {
+  if (slideTimer) {
+    clearInterval(slideTimer)
+    slideTimer = null
+  }
+}
+
+const startSlideTimer = () => {
+  stopSlideTimer()
+
+  if (props.showHero === false || heroSlides.value.length < 2) {
+    return
+  }
+
+  slideTimer = setInterval(() => {
+    activeSlide.value = (activeSlide.value + 1) % heroSlides.value.length
+  }, 3400)
+}
 
 const fallbackSlides = [
   {
-    path: "/uploads/seed/Merengovyj_rulet_fistashka-malina.png",
-    name: "Фисташка и малина",
+    path: '/uploads/seed/Merengovyj_rulet_fistashka-malina.png',
+    name: 'Фисташка и малина'
   },
   {
-    path: "/uploads/seed/MERENGOVYJ_RULET_MRAMOR-CHYORNAYA_SMORODINA.png",
-    name: "Мрамор — черная смородина",
+    path: '/uploads/seed/MERENGOVYJ_RULET_MRAMOR-CHYORNAYA_SMORODINA.png',
+    name: 'Мрамор — черная смородина'
   },
   {
-    path: "/uploads/seed/Kartoshka_v_shokolade.png",
-    name: "Картошка в шоколаде",
+    path: '/uploads/seed/Kartoshka_v_shokolade.png',
+    name: 'Картошка в шоколаде'
   },
   {
-    path: "/uploads/seed/Zefir_kruglaya_korobka.png",
-    name: "Зефир в коробках",
-  },
-];
+    path: '/uploads/seed/Zefir_kruglaya_korobka.png',
+    name: 'Зефир в коробках'
+  }
+]
 
 const { data: heroData } = await useFetch<{
   desserts: Array<{
-    name: string;
-    photos: Array<{ path: string }>;
-  }>;
-}>("/api/site/public", {
-  default: () => ({ desserts: [] }),
-});
+    name: string
+    photos: Array<{ path: string }>
+  }>
+}>('/api/site/public', {
+  default: () => ({ desserts: [] })
+})
 
 const heroSlides = computed(() => {
   const flattened =
     heroData.value?.desserts?.flatMap((dessert) =>
       (dessert.photos || []).map((photo) => ({
         path: photo.path,
-        name: dessert.name,
+        name: dessert.name
       })),
-    ) || [];
+    ) || []
 
   const unique = flattened.filter(
-    (slide, index, array) =>
-      array.findIndex((item) => item.path === slide.path) === index,
-  );
-  return unique.length ? unique.slice(0, 8) : fallbackSlides;
-});
+    (slide, index, array) => array.findIndex((item) => item.path === slide.path) === index,
+  )
+  return unique.length ? unique.slice(0, 8) : fallbackSlides
+})
 
-const floatingNames = computed(() =>
-  [...new Set(heroSlides.value.map((item) => item.name))].slice(0, 6),
-);
+const floatingNames = computed(() => [...new Set(heroSlides.value.map((item) => item.name))].slice(0, 6))
 
-const activeSlide = ref(0);
-let slideTimer: ReturnType<typeof setInterval> | null = null;
+watch(
+  () => route.fullPath,
+  () => {
+    closeMobileMenu()
+  },
+)
+
+watch([() => props.showHero, () => heroSlides.value.length], startSlideTimer)
 
 onMounted(() => {
-  if (props.showHero === false || heroSlides.value.length < 2) {
-    return;
-  }
-
-  slideTimer = setInterval(() => {
-    activeSlide.value = (activeSlide.value + 1) % heroSlides.value.length;
-  }, 3400);
-});
+  window.addEventListener('keydown', onEscape)
+  startSlideTimer()
+})
 
 onBeforeUnmount(() => {
-  if (slideTimer) {
-    clearInterval(slideTimer);
-    slideTimer = null;
-  }
-});
+  stopSlideTimer()
+  window.removeEventListener('keydown', onEscape)
+})
 </script>
 
 <template>
   <header class="hero" id="top">
-    <nav
-      class="top-nav glass-panel reveal-up delay-1"
-      :class="{ 'is-open': isMobileMenuOpen }"
-    >
+    <nav class="top-nav glass-panel reveal-up delay-1" :class="{ 'is-open': isMobileMenuOpen }">
       <div class="top-nav-head">
         <NuxtLink to="/" class="brand-block">
           <img class="logo" src="/logo-malina.svg" alt="Логотип МАЛИНА" />
@@ -103,6 +124,7 @@ onBeforeUnmount(() => {
           type="button"
           :aria-expanded="isMobileMenuOpen"
           aria-controls="mobile-nav-dropdown"
+          aria-label="Открыть или закрыть меню"
           @click="toggleMobileMenu"
         >
           <span>Меню</span>
@@ -119,24 +141,18 @@ onBeforeUnmount(() => {
           <NuxtLink to="/#contacts" @click="closeMobileMenu">Контакты</NuxtLink>
         </div>
         <div class="mobile-actions">
-          <NuxtLink
-            class="btn btn-primary"
-            to="/#request-form"
-            @click="closeMobileMenu"
-            >Заявка</NuxtLink
-          >
+          <NuxtLink class="btn btn-primary" to="/#request-form" @click="closeMobileMenu">Заявка</NuxtLink>
           <a
             class="btn btn-ghost"
             :href="telegramChannel"
             target="_blank"
             rel="noopener noreferrer"
             @click="closeMobileMenu"
-            >Telegram</a
           >
+            Telegram
+          </a>
         </div>
-        <a class="mobile-phone" :href="phoneHref" @click="closeMobileMenu">{{
-          phoneDisplay
-        }}</a>
+        <a class="mobile-phone" :href="phoneHref" @click="closeMobileMenu">{{ phoneDisplay }}</a>
       </div>
     </nav>
 
@@ -145,20 +161,12 @@ onBeforeUnmount(() => {
         <p class="badge">Десерты ручной работы</p>
         <h1>МАЛИНА — десерты на заказ</h1>
         <p class="hero-text">
-          Нежные рулеты, зефирные букеты и подарочные наборы из натуральных
-          ингредиентов. Изготавливаем десерты под ваш запрос и дату.
+          Нежные рулеты, зефирные букеты и подарочные наборы из натуральных ингредиентов. Изготавливаем десерты под
+          ваш запрос и дату.
         </p>
         <div class="hero-actions">
-          <NuxtLink class="btn btn-primary" to="/#request-form"
-            >Оставить заявку</NuxtLink
-          >
-          <a
-            class="btn btn-ghost"
-            :href="telegramChannel"
-            target="_blank"
-            rel="noopener noreferrer"
-            >Telegram канал</a
-          >
+          <NuxtLink class="btn btn-primary" to="/#request-form">Оставить заявку</NuxtLink>
+          <a class="btn btn-ghost" :href="telegramChannel" target="_blank" rel="noopener noreferrer">Telegram канал</a>
         </div>
         <div class="hero-contacts">
           <a :href="phoneHref">{{ phoneDisplay }}</a>
@@ -166,10 +174,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div
-        class="hero-visual hero-visual-slider reveal-up delay-3"
-        aria-hidden="true"
-      >
+      <div class="hero-visual hero-visual-slider reveal-up delay-3" aria-hidden="true">
         <div class="hero-slides">
           <div
             v-for="(slide, index) in heroSlides"
@@ -194,11 +199,3 @@ onBeforeUnmount(() => {
     </div>
   </header>
 </template>
-
-<style>
-.logo {
-  object-fit: cover;
-  width: 200px;
-  height: 60px;
-}
-</style>

@@ -1,6 +1,7 @@
 import { PhotoSource } from '@prisma/client'
 import { readBody } from 'h3'
 import { requireAdmin } from '../../utils/admin-auth'
+import { assertMaxLength, isSafePublicImagePath, sanitizeText } from '../../utils/input'
 import { prisma } from '../../utils/prisma'
 
 type PhotoPayload = {
@@ -11,7 +12,23 @@ type PhotoPayload = {
   source?: 'seed' | 'telegram' | 'admin'
 }
 
-const clean = (value: unknown, fallback = '') => String(value ?? fallback).trim()
+const clean = (value: unknown, fallback = '') => sanitizeText(value ?? fallback)
+const parseSource = (value: unknown) => {
+  const source = clean(value).toLowerCase()
+  if (!source) {
+    return PhotoSource.admin
+  }
+  if (source === 'seed') {
+    return PhotoSource.seed
+  }
+  if (source === 'telegram') {
+    return PhotoSource.telegram
+  }
+  if (source === 'admin') {
+    return PhotoSource.admin
+  }
+  throw createError({ statusCode: 400, statusMessage: 'Недопустимое значение source.' })
+}
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event)
@@ -22,6 +39,18 @@ export default defineEventHandler(async (event) => {
 
   if (!path) {
     throw createError({ statusCode: 400, statusMessage: 'Поле path обязательно.' })
+  }
+  if (!isSafePublicImagePath(path)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Разрешены только локальные пути изображений вида /uploads/... или /images/...'
+    })
+  }
+  if (!assertMaxLength(path, 400)) {
+    throw createError({ statusCode: 400, statusMessage: 'Поле path слишком длинное.' })
+  }
+  if (!assertMaxLength(title, 120)) {
+    throw createError({ statusCode: 400, statusMessage: 'Название фото не должно превышать 120 символов.' })
   }
 
   let dessertId: string | null = null
@@ -41,7 +70,7 @@ export default defineEventHandler(async (event) => {
       title,
       dessertId,
       inGallery: typeof body.inGallery === 'boolean' ? body.inGallery : true,
-      source: body.source ? PhotoSource[body.source] : PhotoSource.admin
+      source: parseSource(body.source)
     },
     include: {
       dessert: {

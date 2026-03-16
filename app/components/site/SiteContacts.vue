@@ -15,7 +15,7 @@ defineProps<{
     </p>
     <p>
       Telegram канал:
-      <a :href="telegramChannel" target="_blank" rel="noopener noreferrer">{{ telegramChannel }}</a>
+      <a :href="telegramChannel" target="_blank" rel="noopener noreferrer">Перейти в канал</a>
     </p>
   </section>
 </template>

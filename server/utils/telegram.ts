@@ -12,6 +12,7 @@ type TelegramApiResponse<TResponse> = {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const telegramProxyUrl = process.env.TELEGRAM_PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY
 const telegramProxyAgent = telegramProxyUrl ? new ProxyAgent(telegramProxyUrl) : null
+const TELEGRAM_HTTP_TIMEOUT_MS = Number(process.env.TELEGRAM_HTTP_TIMEOUT_MS || 25000)
 
 export const telegramRequest = async <TResponse = unknown>(
   token: string,
@@ -29,6 +30,7 @@ export const telegramRequest = async <TResponse = unknown>(
           'content-type': 'application/json'
         },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(TELEGRAM_HTTP_TIMEOUT_MS),
         ...(telegramProxyAgent ? ({ dispatcher: telegramProxyAgent } as object) : {})
       })
 
@@ -53,6 +55,8 @@ export const telegramRequest = async <TResponse = unknown>(
 
       const isRetryableNetworkError =
         fullMessage.includes('fetch failed') ||
+        fullMessage.includes('AbortError') ||
+        fullMessage.toLowerCase().includes('timed out') ||
         fullMessage.includes('ETIMEDOUT') ||
         fullMessage.includes('ECONNRESET') ||
         fullMessage.includes('EAI_AGAIN')
@@ -98,6 +102,7 @@ export const fetchTelegramFile = async (token: string, fileId: string) => {
   }
 
   const response = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`, {
+    signal: AbortSignal.timeout(TELEGRAM_HTTP_TIMEOUT_MS),
     ...(telegramProxyAgent ? ({ dispatcher: telegramProxyAgent } as object) : {})
   })
   if (!response.ok) {

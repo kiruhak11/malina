@@ -1,5 +1,7 @@
 import { readBody } from 'h3'
 import { prisma } from '../../utils/prisma'
+import { assertMaxLength, isValidFutureDate, isValidPhone, sanitizeText } from '../../utils/input'
+import { enforceRateLimit } from '../../utils/rate-limit'
 import { getOrderTelegramTargets } from '../../utils/telegram-targets'
 import { sendTelegramMessage } from '../../utils/telegram'
 
@@ -11,21 +13,44 @@ type OrderPayload = {
   details?: string
 }
 
-const sanitize = (value: string) => value.replace(/[<>]/g, '').trim()
 const isValidTelegramChatId = (value: string) => /^-?\d+$/.test(value)
 
 export default defineEventHandler(async (event) => {
+  enforceRateLimit(event, {
+    key: 'site-order',
+    limit: 5,
+    windowMs: 10 * 60 * 1000
+  })
+
   const body = await readBody<OrderPayload>(event)
   const config = useRuntimeConfig(event)
 
-  const name = sanitize(body?.name || '')
-  const phone = sanitize(body?.phone || '')
-  const dessert = sanitize(body?.dessert || '')
-  const orderDate = sanitize(body?.orderDate || '')
-  const details = sanitize(body?.details || '')
+  const name = sanitizeText(body?.name)
+  const phone = sanitizeText(body?.phone)
+  const dessert = sanitizeText(body?.dessert)
+  const orderDate = sanitizeText(body?.orderDate)
+  const details = sanitizeText(body?.details, { multiline: true })
 
   if (!name || !phone || !dessert || !orderDate) {
     throw createError({ statusCode: 400, statusMessage: 'Некорректные данные заявки.' })
+  }
+  if (!assertMaxLength(name, 80) || name.length < 2) {
+    throw createError({ statusCode: 400, statusMessage: 'Имя должно содержать от 2 до 80 символов.' })
+  }
+  if (!assertMaxLength(phone, 32) || !isValidPhone(phone)) {
+    throw createError({ statusCode: 400, statusMessage: 'Укажите корректный номер телефона.' })
+  }
+  if (!assertMaxLength(dessert, 120) || dessert.length < 2) {
+    throw createError({ statusCode: 400, statusMessage: 'Поле десерта заполнено некорректно.' })
+  }
+  if (!isValidFutureDate(orderDate)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Дата заказа должна быть в формате ГГГГ-ММ-ДД и не раньше сегодняшней.'
+    })
+  }
+  if (!assertMaxLength(details, 1000)) {
+    throw createError({ statusCode: 400, statusMessage: 'Комментарий слишком длинный (максимум 1000 символов).' })
   }
 
   const token = String(config.telegramBotToken || '')
@@ -75,10 +100,13 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!deliveredCount) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Не удалось отправить заявку в Telegram.${lastTelegramError ? ` ${lastTelegramError}` : ''}`
-    })
+    console.error(`Order ${created.id} saved, but Telegram delivery failed.`, lastTelegramError)
+    return {
+      ok: true,
+      id: created.id,
+      telegramDelivered: 0,
+      warning: 'Заявка сохранена, но уведомление в Telegram не отправлено. Мы обработаем ее вручную.'
+    }
   }
 
   return { ok: true, id: created.id, telegramDelivered: deliveredCount }

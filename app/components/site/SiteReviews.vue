@@ -32,7 +32,7 @@ const stars = [1, 2, 3, 4, 5]
 <template>
   <section class="section reveal-up" id="reviews">
     <h2>Отзывы</h2>
-    <div class="reviews-list">
+    <div v-if="reviews.length" class="reviews-list">
       <article v-for="item in reviews" :key="item.id" class="review-item glass-soft">
         <div class="review-stars" :aria-label="`Оценка ${item.rating} из 5`">
           <span v-for="star in 5" :key="`display-${item.name}-${star}`" :class="{ active: star <= item.rating }">★</span>
@@ -41,24 +41,33 @@ const stars = [1, 2, 3, 4, 5]
         <p>{{ item.text }}</p>
       </article>
     </div>
+    <p v-else>Пока нет опубликованных отзывов. Вы можете оставить первый.</p>
 
     <h3>Оставить отзыв</h3>
     <p>Отзыв отправляется в Telegram на модерацию. После подтверждения он добавляется на сайт.</p>
     <form class="form form-shell" @submit.prevent="emit('submit')">
       <label class="field">
         <span class="field-label">Имя</span>
-        <input v-model.trim="form.name" type="text" placeholder="Ваше имя" required />
+        <input v-model.trim="form.name" type="text" placeholder="Ваше имя" autocomplete="name" maxlength="80" required />
       </label>
       <label class="field">
         <span class="field-label">Телефон</span>
-        <input v-model.trim="form.phone" type="tel" placeholder="Контактный телефон" required />
+        <input
+          v-model.trim="form.phone"
+          type="tel"
+          placeholder="Контактный телефон"
+          autocomplete="tel"
+          inputmode="tel"
+          maxlength="32"
+          required
+        />
       </label>
 
       <fieldset class="field field-full rating-field">
         <legend class="field-label">Оценка</legend>
         <div class="rating-stars" role="radiogroup" aria-label="Выберите оценку">
           <label v-for="star in stars" :key="`rate-${star}`" class="rating-star" :class="{ active: form.rating >= star }">
-            <input v-model.number="form.rating" type="radio" name="rating" :value="star" required />
+            <input v-model.number="form.rating" type="radio" name="rating" :value="star" :aria-label="`Оценка ${star}`" required />
             <span>★</span>
           </label>
         </div>
@@ -66,7 +75,7 @@ const stars = [1, 2, 3, 4, 5]
 
       <label class="field field-full">
         <span class="field-label">Текст отзыва</span>
-        <textarea v-model.trim="form.review" rows="4" placeholder="Ваш отзыв" required />
+        <textarea v-model.trim="form.review" rows="4" maxlength="1500" placeholder="Ваш отзыв" required />
       </label>
 
       <div class="submit-row">

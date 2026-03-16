@@ -8,7 +8,7 @@ const sha256 = (value: string) => createHash('sha256').update(value).digest('hex
 
 const sessionCookieOptions = (maxAgeSeconds: number) => ({
   httpOnly: true,
-  sameSite: 'lax' as const,
+  sameSite: 'strict' as const,
   secure: process.env.NODE_ENV === 'production',
   path: '/',
   maxAge: maxAgeSeconds

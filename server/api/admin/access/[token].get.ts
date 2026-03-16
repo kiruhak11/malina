@@ -1,7 +1,14 @@
 import { sendRedirect } from 'h3'
 import { consumeAdminAccessLink, createAdminSession } from '../../../utils/admin-auth'
+import { enforceRateLimit } from '../../../utils/rate-limit'
 
 export default defineEventHandler(async (event) => {
+  enforceRateLimit(event, {
+    key: 'admin-access-link',
+    limit: 20,
+    windowMs: 15 * 60 * 1000
+  })
+
   const token = getRouterParam(event, 'token')
 
   if (!token) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
 import type { Product, Review } from '~/types/site'
 import { phoneDisplay, phoneHref, telegramChannel } from '~/data/siteData'
 
@@ -13,9 +13,15 @@ useHead({
   ]
 })
 
-const { data: siteData, refresh } = await useFetch<{ desserts: Product[]; reviews: Review[]; gallery: unknown[] }>(
-  '/api/site/public'
-)
+type SitePublicPayload = {
+  desserts: Product[]
+  reviews: Review[]
+  gallery: Array<{ id: string; path: string; title: string | null }>
+}
+
+const { data: siteData, pending, error, refresh } = await useFetch<SitePublicPayload>('/api/site/public', {
+  key: 'site-public'
+})
 
 const groupedProducts = computed(() => {
   const desserts: Product[] = siteData.value?.desserts || []
@@ -51,6 +57,12 @@ const orderStatus = ref('')
 const reviewStatus = ref('')
 const isSubmittingOrder = ref(false)
 const isSubmittingReview = ref(false)
+const now = new Date()
+const todayIso = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10)
+const pageErrorMessage = computed(() => {
+  const payloadMessage = (error.value as { data?: { statusMessage?: string } })?.data?.statusMessage
+  return payloadMessage || (error.value ? 'Не удалось загрузить данные сайта. Попробуйте обновить страницу.' : '')
+})
 
 const openDessertModal = (dessert: Product) => {
   selectedDessert.value = dessert
@@ -60,10 +72,14 @@ const closeDessertModal = () => {
   selectedDessert.value = null
 }
 
-const selectDessert = (dessertName: string) => {
+const selectDessert = async (dessertName: string) => {
   orderForm.dessert = dessertName
   const element = document.getElementById('request-form')
   element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+  await nextTick()
+  const dessertInput = document.getElementById('order-dessert') as HTMLInputElement | null
+  dessertInput?.focus()
 }
 
 const submitOrder = async () => {
@@ -71,19 +87,25 @@ const submitOrder = async () => {
     orderStatus.value = 'Заполните обязательные поля: имя, телефон, десерт и дата заказа.'
     return
   }
+  if (orderForm.orderDate < todayIso) {
+    orderStatus.value = 'Дата заказа не может быть в прошлом.'
+    return
+  }
 
   isSubmittingOrder.value = true
   orderStatus.value = ''
 
   try {
-    await $fetch('/api/site/order', {
+    const response = await $fetch<{ warning?: string }>('/api/site/order', {
       method: 'POST',
       body: {
         ...orderForm
       }
     })
 
-    orderStatus.value = 'Заявка отправлена. Мы свяжемся с вами в ближайшее время.'
+    orderStatus.value = response.warning
+      ? `Заявка сохранена. ${response.warning}`
+      : 'Заявка отправлена. Мы свяжемся с вами в ближайшее время.'
     orderForm.name = ''
     orderForm.phone = ''
     orderForm.dessert = ''
@@ -111,19 +133,20 @@ const submitReview = async () => {
   reviewStatus.value = ''
 
   try {
-    await $fetch('/api/site/review', {
+    const response = await $fetch<{ warning?: string }>('/api/site/review', {
       method: 'POST',
       body: {
         ...reviewForm
       }
     })
 
-    reviewStatus.value = 'Отзыв отправлен на модерацию. После подтверждения он добавляется на сайт.'
+    reviewStatus.value = response.warning
+      ? `Отзыв сохранен. ${response.warning}`
+      : 'Отзыв отправлен на модерацию. После подтверждения он добавляется на сайт.'
     reviewForm.name = ''
     reviewForm.phone = ''
     reviewForm.review = ''
     reviewForm.rating = 5
-    await refresh()
   } catch (error: unknown) {
     const statusMessage =
       (error as { data?: { statusMessage?: string }; statusMessage?: string })?.data?.statusMessage ||
@@ -139,20 +162,45 @@ const submitReview = async () => {
 
 <template>
   <main class="site-main">
-    <SiteAbout />
-    <SiteCatalog
-      :grouped-products="groupedProducts"
-      @select-dessert="selectDessert"
-      @open-dessert="openDessertModal"
-    />
-    <SiteConditions />
-    <SiteOrderForm :form="orderForm" :status="orderStatus" :is-submitting="isSubmittingOrder" @submit="submitOrder" />
-    <SiteReviews :reviews="reviews" :form="reviewForm" :status="reviewStatus" :is-submitting="isSubmittingReview" @submit="submitReview" />
-    <SiteContacts
-      :phone-display="phoneDisplay"
-      :phone-href="phoneHref"
-      :telegram-channel="telegramChannel"
-    />
+    <section v-if="pending && !siteData" class="section reveal-up">
+      <h2>Загрузка данных</h2>
+      <p>Получаем каталог, отзывы и галерею.</p>
+    </section>
+
+    <section v-else-if="pageErrorMessage" class="section reveal-up">
+      <h2>Ошибка загрузки</h2>
+      <p>{{ pageErrorMessage }}</p>
+      <button class="btn btn-primary" type="button" @click="refresh">Повторить</button>
+    </section>
+
+    <template v-else>
+      <SiteAbout />
+      <SiteCatalog
+        :grouped-products="groupedProducts"
+        @select-dessert="selectDessert"
+        @open-dessert="openDessertModal"
+      />
+      <SiteConditions />
+      <SiteOrderForm
+        :form="orderForm"
+        :status="orderStatus"
+        :is-submitting="isSubmittingOrder"
+        :min-order-date="todayIso"
+        @submit="submitOrder"
+      />
+      <SiteReviews
+        :reviews="reviews"
+        :form="reviewForm"
+        :status="reviewStatus"
+        :is-submitting="isSubmittingReview"
+        @submit="submitReview"
+      />
+      <SiteContacts
+        :phone-display="phoneDisplay"
+        :phone-href="phoneHref"
+        :telegram-channel="telegramChannel"
+      />
+    </template>
   </main>
 
   <SiteDessertModal :dessert="selectedDessert" @close="closeDessertModal" />
