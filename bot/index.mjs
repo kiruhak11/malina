@@ -68,6 +68,14 @@ const telegramRequest = async (method, body) => {
   return payload.result || []
 }
 
+const ensurePollingMode = async () => {
+  try {
+    await telegramRequest('deleteWebhook', { drop_pending_updates: false })
+  } catch (error) {
+    console.error('deleteWebhook error:', error)
+  }
+}
+
 const forwardUpdate = async (update) => {
   const response = await fetch(forwardUrl, {
     method: 'POST',
@@ -83,6 +91,7 @@ const forwardUpdate = async (update) => {
 }
 
 const run = async () => {
+  await ensurePollingMode()
   console.log(`Bot polling started. Forward: ${forwardUrl}`)
 
   while (true) {

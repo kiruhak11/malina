@@ -58,6 +58,19 @@ BOT_FORWARD_URL=http://localhost:3000/api/telegram/webhook
 docker compose -f docker-compose-prod.yml up -d --build
 ```
 
+Под ваш nginx (`proxy_pass http://127.0.0.1:4015/`) сервис `web` уже настроен на bind:
+
+```yaml
+ports:
+  - "127.0.0.1:4015:3000"
+```
+
+Обязательно задайте в `.env`:
+
+```bash
+PUBLIC_SITE_URL=https://malina.kiruhak11.ru
+```
+
 Сервисы в compose:
 - `db` — PostgreSQL
 - `web` — Nuxt/Nitro сайт + API
