@@ -396,7 +396,13 @@ select:focus-visible {
   bottom: 0.82rem;
   padding: 0 0.8rem;
   overflow: hidden;
-  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 7%,
+    #000 93%,
+    transparent
+  );
 }
 
 .hero-name-track {
@@ -445,12 +451,6 @@ select:focus-visible {
   font-size: clamp(1.9rem, 3.2vw, 2.8rem);
 }
 
-.section p,
-.section li,
-.card p {
-  color: var(--muted);
-}
-
 .features {
   margin-top: 1rem;
   display: grid;
@@ -492,8 +492,16 @@ select:focus-visible {
   position: absolute;
   inset: -12% -8%;
   background:
-    radial-gradient(circle at 14% 24%, rgba(255, 210, 229, 0.2), transparent 52%),
-    radial-gradient(circle at 86% 18%, rgba(211, 236, 176, 0.2), transparent 56%);
+    radial-gradient(
+      circle at 14% 24%,
+      rgba(255, 210, 229, 0.2),
+      transparent 52%
+    ),
+    radial-gradient(
+      circle at 86% 18%,
+      rgba(211, 236, 176, 0.2),
+      transparent 56%
+    );
   opacity: 0;
   pointer-events: none;
   z-index: -1;
@@ -915,12 +923,20 @@ textarea::placeholder {
 
 .reviews-list-shell::before {
   left: 0;
-  background: linear-gradient(90deg, rgba(255, 249, 252, 0.98), rgba(255, 249, 252, 0));
+  background: linear-gradient(
+    90deg,
+    rgba(255, 249, 252, 0.98),
+    rgba(255, 249, 252, 0)
+  );
 }
 
 .reviews-list-shell::after {
   right: 0;
-  background: linear-gradient(270deg, rgba(255, 249, 252, 0.98), rgba(255, 249, 252, 0));
+  background: linear-gradient(
+    270deg,
+    rgba(255, 249, 252, 0.98),
+    rgba(255, 249, 252, 0)
+  );
 }
 
 .reviews-list {
@@ -947,7 +963,11 @@ textarea::placeholder {
 }
 
 .reviews-list::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, rgba(159, 191, 115, 0.9), rgba(198, 58, 107, 0.8));
+  background: linear-gradient(
+    90deg,
+    rgba(159, 191, 115, 0.9),
+    rgba(198, 58, 107, 0.8)
+  );
   border-radius: 999px;
 }
 
@@ -957,7 +977,12 @@ textarea::placeholder {
   min-height: 180px;
   scroll-snap-align: start;
   border-color: rgba(159, 191, 115, 0.3);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(255, 243, 248, 0.85) 52%, rgba(240, 248, 232, 0.89));
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.92),
+    rgba(255, 243, 248, 0.85) 52%,
+    rgba(240, 248, 232, 0.89)
+  );
   box-shadow:
     0 14px 24px rgba(149, 35, 80, 0.12),
     0 10px 22px rgba(111, 143, 71, 0.12);
@@ -1010,7 +1035,11 @@ textarea::placeholder {
   height: 42px;
   border-radius: 999px;
   border: 1px solid rgba(111, 143, 71, 0.42);
-  background: linear-gradient(145deg, rgba(248, 252, 240, 0.98), rgba(233, 245, 212, 0.96));
+  background: linear-gradient(
+    145deg,
+    rgba(248, 252, 240, 0.98),
+    rgba(233, 245, 212, 0.96)
+  );
   color: #5b2f44;
   font-size: 1.16rem;
   font-weight: 900;
@@ -1090,7 +1119,11 @@ textarea::placeholder {
   height: 48px;
   border-radius: 999px;
   border: 1px solid rgba(111, 143, 71, 0.44);
-  background: linear-gradient(145deg, rgba(248, 252, 240, 0.98), rgba(233, 245, 212, 0.96));
+  background: linear-gradient(
+    145deg,
+    rgba(248, 252, 240, 0.98),
+    rgba(233, 245, 212, 0.96)
+  );
   color: #5b2f44;
   font-size: 1.28rem;
   font-weight: 900;
