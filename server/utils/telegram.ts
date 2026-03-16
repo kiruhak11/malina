@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import { ProxyAgent } from 'undici'
 
 type TelegramApiResponse<TResponse> = {
   ok: boolean
@@ -9,6 +10,8 @@ type TelegramApiResponse<TResponse> = {
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+const telegramProxyUrl = process.env.TELEGRAM_PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY
+const telegramProxyAgent = telegramProxyUrl ? new ProxyAgent(telegramProxyUrl) : null
 
 export const telegramRequest = async <TResponse = unknown>(
   token: string,
@@ -20,18 +23,23 @@ export const telegramRequest = async <TResponse = unknown>(
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      const response = await $fetch<TelegramApiResponse<TResponse>>(`https://api.telegram.org/bot${token}/${method}`, {
+      const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
         method: 'POST',
-        body
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(body),
+        ...(telegramProxyAgent ? ({ dispatcher: telegramProxyAgent } as object) : {})
       })
 
-      if (!response.ok) {
+      const payload = (await response.json()) as TelegramApiResponse<TResponse>
+      if (!response.ok || !payload.ok) {
         throw new Error(
-          `Telegram API ${method} failed${response.error_code ? ` (${response.error_code})` : ''}: ${response.description || 'unknown error'}`
+          `Telegram API ${method} failed${payload.error_code ? ` (${payload.error_code})` : ''}: ${payload.description || `HTTP ${response.status}`}`
         )
       }
 
-      return response.result as TResponse
+      return payload.result as TResponse
     } catch (error: unknown) {
       const payloadDescription =
         (error as { data?: { description?: string; error_code?: number } })?.data?.description || null
@@ -89,9 +97,13 @@ export const fetchTelegramFile = async (token: string, fileId: string) => {
     throw new Error('Telegram не вернул путь к файлу.')
   }
 
-  const fileBuffer = await $fetch<ArrayBuffer>(`https://api.telegram.org/file/bot${token}/${filePath}`, {
-    responseType: 'arrayBuffer'
+  const response = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`, {
+    ...(telegramProxyAgent ? ({ dispatcher: telegramProxyAgent } as object) : {})
   })
+  if (!response.ok) {
+    throw new Error(`Telegram file download failed: HTTP ${response.status}`)
+  }
+  const fileBuffer = await response.arrayBuffer()
 
   return {
     filePath,

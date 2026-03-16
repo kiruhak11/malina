@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { ProxyAgent } from 'undici'
 
 const loadEnvFile = () => {
   const envPath = resolve(process.cwd(), '.env')
@@ -37,6 +38,8 @@ loadEnvFile()
 const token = process.env.TELEGRAM_BOT_TOKEN || process.env.TG_BOT
 const forwardUrl = process.env.BOT_FORWARD_URL || 'http://web:3000/api/telegram/webhook'
 const timeoutSec = Number(process.env.BOT_POLL_TIMEOUT || 50)
+const telegramProxyUrl = process.env.TELEGRAM_PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY
+const telegramProxyAgent = telegramProxyUrl ? new ProxyAgent(telegramProxyUrl) : null
 
 if (!token) {
   console.error('TELEGRAM_BOT_TOKEN не задан. Бот остановлен.')
@@ -53,7 +56,8 @@ const telegramRequest = async (method, body) => {
     headers: {
       'content-type': 'application/json'
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    ...(telegramProxyAgent ? { dispatcher: telegramProxyAgent } : {})
   })
 
   if (!response.ok) {
