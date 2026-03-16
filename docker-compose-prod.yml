@@ -25,11 +25,16 @@ services:
     environment:
       NODE_ENV: production
       NODE_OPTIONS: --dns-result-order=ipv4first
+      NODE_USE_ENV_PROXY: "1"
+      TELEGRAM_PROXY_URL: ${TELEGRAM_PROXY_URL:-http://QBDjXk:Goh0vs@200.71.126.190:9884}
+      HTTPS_PROXY: ${TELEGRAM_PROXY_URL:-http://QBDjXk:Goh0vs@200.71.126.190:9884}
+      HTTP_PROXY: ${TELEGRAM_PROXY_URL:-http://QBDjXk:Goh0vs@200.71.126.190:9884}
+      NO_PROXY: localhost,127.0.0.1,db,web
       DATABASE_URL: postgresql://malina:malinaAdminP@db:5432/malina?schema=public
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       TELEGRAM_REVIEW_CHAT_ID: ${TELEGRAM_REVIEW_CHAT_ID:-}
-      TELEGRAM_ADMIN_IDS: ${TELEGRAM_ADMIN_IDS:-502773482,111111}
+      TELEGRAM_ADMIN_IDS: ${TELEGRAM_ADMIN_IDS:-502773482}
       ADMIN_CREDENTIAL: malinaAdminP
       PUBLIC_SITE_URL: https://malina.kiruhak11.ru
     command: sh -c "npm run prisma:generate && npx prisma db push --skip-generate && npm run prisma:seed && node .output/server/index.mjs"
@@ -48,6 +53,11 @@ services:
       - web
     environment:
       NODE_OPTIONS: --dns-result-order=ipv4first
+      NODE_USE_ENV_PROXY: "1"
+      TELEGRAM_PROXY_URL: ${TELEGRAM_PROXY_URL:-http://QBDjXk:Goh0vs@200.71.126.190:9884}
+      HTTPS_PROXY: ${TELEGRAM_PROXY_URL:-http://QBDjXk:Goh0vs@200.71.126.190:9884}
+      HTTP_PROXY: ${TELEGRAM_PROXY_URL:-http://QBDjXk:Goh0vs@200.71.126.190:9884}
+      NO_PROXY: localhost,127.0.0.1,db,web
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       BOT_FORWARD_URL: http://web:3000/api/telegram/webhook
     command: npm run bot

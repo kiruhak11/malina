@@ -8,37 +8,58 @@ type TelegramApiResponse<TResponse> = {
   error_code?: number
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 export const telegramRequest = async <TResponse = unknown>(
   token: string,
   method: string,
   body: Record<string, unknown>
 ) => {
-  try {
-    const response = await $fetch<TelegramApiResponse<TResponse>>(`https://api.telegram.org/bot${token}/${method}`, {
-      method: 'POST',
-      body
-    })
+  const attempts = 3
+  let lastError: unknown = null
 
-    if (!response.ok) {
-      throw new Error(
-        `Telegram API ${method} failed${response.error_code ? ` (${response.error_code})` : ''}: ${response.description || 'unknown error'}`
-      )
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await $fetch<TelegramApiResponse<TResponse>>(`https://api.telegram.org/bot${token}/${method}`, {
+        method: 'POST',
+        body
+      })
+
+      if (!response.ok) {
+        throw new Error(
+          `Telegram API ${method} failed${response.error_code ? ` (${response.error_code})` : ''}: ${response.description || 'unknown error'}`
+        )
+      }
+
+      return response.result as TResponse
+    } catch (error: unknown) {
+      const payloadDescription =
+        (error as { data?: { description?: string; error_code?: number } })?.data?.description || null
+      const payloadCode = (error as { data?: { error_code?: number } })?.data?.error_code || null
+      const message = error instanceof Error ? error.message : String(error)
+      const causeMessage =
+        (error as { cause?: { message?: string; code?: string; errno?: number } })?.cause?.message ||
+        (error as { cause?: { code?: string; errno?: number } })?.cause?.code ||
+        ''
+      const fullMessage = `Telegram API ${method} request failed${payloadCode ? ` (${payloadCode})` : ''}: ${payloadDescription || message}${causeMessage ? `; cause: ${causeMessage}` : ''}`
+
+      const isRetryableNetworkError =
+        fullMessage.includes('fetch failed') ||
+        fullMessage.includes('ETIMEDOUT') ||
+        fullMessage.includes('ECONNRESET') ||
+        fullMessage.includes('EAI_AGAIN')
+
+      lastError = new Error(fullMessage)
+
+      if (!isRetryableNetworkError || attempt === attempts) {
+        throw lastError
+      }
+
+      await sleep(350 * attempt)
     }
-
-    return response.result as TResponse
-  } catch (error: unknown) {
-    const payloadDescription =
-      (error as { data?: { description?: string; error_code?: number } })?.data?.description || null
-    const payloadCode = (error as { data?: { error_code?: number } })?.data?.error_code || null
-    const message = error instanceof Error ? error.message : String(error)
-    const causeMessage =
-      (error as { cause?: { message?: string; code?: string; errno?: number } })?.cause?.message ||
-      (error as { cause?: { code?: string; errno?: number } })?.cause?.code ||
-      ''
-    throw new Error(
-      `Telegram API ${method} request failed${payloadCode ? ` (${payloadCode})` : ''}: ${payloadDescription || message}${causeMessage ? `; cause: ${causeMessage}` : ''}`
-    )
   }
+
+  throw lastError instanceof Error ? lastError : new Error(`Telegram API ${method} request failed`)
 }
 
 type SendTelegramMessageOptions = {

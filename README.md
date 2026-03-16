@@ -36,7 +36,8 @@ DATABASE_URL=postgresql://malina:malinaAdminP@localhost:5433/malina?schema=publi
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_CHAT_ID=...
 TELEGRAM_REVIEW_CHAT_ID=...
-TELEGRAM_ADMIN_IDS=502773482,111111
+TELEGRAM_ADMIN_IDS=502773482
+TELEGRAM_PROXY_URL=http://login:password@host:port
 
 ADMIN_CREDENTIAL=malinaAdminP
 ADMIN_SESSION_DAYS=14
@@ -45,6 +46,8 @@ PUBLIC_SITE_URL=http://localhost:3000
 # для bot service
 BOT_FORWARD_URL=http://localhost:3000/api/telegram/webhook
 ```
+
+Если на сервере заблокирован прямой доступ к Telegram, задайте `TELEGRAM_PROXY_URL` и перезапустите `web` + `bot`.
 
 ## Docker production
 
