@@ -31,8 +31,12 @@ export const telegramRequest = async <TResponse = unknown>(
       (error as { data?: { description?: string; error_code?: number } })?.data?.description || null
     const payloadCode = (error as { data?: { error_code?: number } })?.data?.error_code || null
     const message = error instanceof Error ? error.message : String(error)
+    const causeMessage =
+      (error as { cause?: { message?: string; code?: string; errno?: number } })?.cause?.message ||
+      (error as { cause?: { code?: string; errno?: number } })?.cause?.code ||
+      ''
     throw new Error(
-      `Telegram API ${method} request failed${payloadCode ? ` (${payloadCode})` : ''}: ${payloadDescription || message}`
+      `Telegram API ${method} request failed${payloadCode ? ` (${payloadCode})` : ''}: ${payloadDescription || message}${causeMessage ? `; cause: ${causeMessage}` : ''}`
     )
   }
 }

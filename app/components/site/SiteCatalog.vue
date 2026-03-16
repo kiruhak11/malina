@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import type { Product } from '~/types/site'
+import type { Product } from "~/types/site";
 
 defineProps<{
-  groupedProducts: Array<{ category: string; items: Product[] }>
-}>()
+  groupedProducts: Array<{ category: string; items: Product[] }>;
+}>();
 
 const emit = defineEmits<{
-  selectDessert: [dessertName: string]
-  openDessert: [dessert: Product]
-}>()
+  selectDessert: [dessertName: string];
+  openDessert: [dessert: Product];
+}>();
 </script>
 
 <template>
@@ -16,7 +16,11 @@ const emit = defineEmits<{
     <h2>Каталог десертов</h2>
 
     <div class="catalog-groups">
-      <div v-for="group in groupedProducts" :key="group.category" class="catalog-group">
+      <div
+        v-for="group in groupedProducts"
+        :key="group.category"
+        class="catalog-group"
+      >
         <h3>{{ group.category }}</h3>
         <div class="cards">
           <article
@@ -31,11 +35,9 @@ const emit = defineEmits<{
             <div
               class="card-image"
               :style="{
-                backgroundImage: `linear-gradient(135deg, rgba(93, 28, 52, 0.22), rgba(133, 45, 78, 0.14)), url('${item.photos?.[0]?.path || '/images/roll-classic.svg'}')`
+                backgroundImage: `linear-gradient(135deg, rgba(93, 28, 52, 0.22), rgba(133, 45, 78, 0.14)), url('${item.photos?.[0]?.path || '/images/roll-classic.svg'}')`,
               }"
-            >
-              {{ item.name }}
-            </div>
+            ></div>
             <div class="card-body">
               <h4>{{ item.name }}</h4>
               <p>{{ item.description }}</p>
@@ -44,10 +46,11 @@ const emit = defineEmits<{
               <div class="card-footer">
                 <span class="price">{{ item.price }}</span>
                 <div class="card-actions">
-                  <button class="btn btn-ghost" type="button" @click.stop="emit('openDessert', item)">
-                    ТТК и детали
-                  </button>
-                  <button class="btn btn-primary" type="button" @click.stop="emit('selectDessert', item.name)">
+                  <button
+                    class="btn btn-primary"
+                    type="button"
+                    @click.stop="emit('selectDessert', item.name)"
+                  >
                     Оставить заявку
                   </button>
                 </div>
