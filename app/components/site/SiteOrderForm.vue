@@ -70,7 +70,7 @@ const statusClass = computed(() => {
           v-model.trim="form.details"
           rows="4"
           maxlength="1000"
-          placeholder="Пожелания по составу, декору, формату подачи"
+          placeholder="Пожелания по декору, дате и упаковке"
         />
       </label>
 

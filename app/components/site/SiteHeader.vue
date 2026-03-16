@@ -50,25 +50,30 @@ const startSlideTimer = () => {
 const fallbackSlides = [
   {
     path: '/uploads/seed/Merengovyj_rulet_fistashka-malina.png',
-    name: 'Фисташка и малина'
+    name: 'Фисташка и малина',
+    category: 'Меренговые рулеты'
   },
   {
     path: '/uploads/seed/MERENGOVYJ_RULET_MRAMOR-CHYORNAYA_SMORODINA.png',
-    name: 'Мрамор — черная смородина'
+    name: 'Мрамор — черная смородина',
+    category: 'Меренговые рулеты'
   },
   {
     path: '/uploads/seed/Kartoshka_v_shokolade.png',
-    name: 'Картошка в шоколаде'
+    name: 'Картошка в шоколаде',
+    category: 'Десерты'
   },
   {
     path: '/uploads/seed/Zefir_kruglaya_korobka.png',
-    name: 'Зефир в коробках'
+    name: 'Зефир в коробках',
+    category: 'Зефир'
   }
 ]
 
 const { data: heroData } = await useFetch<{
   desserts: Array<{
     name: string
+    category: string
     photos: Array<{ path: string }>
   }>
 }>('/api/site/public', {
@@ -80,7 +85,8 @@ const heroSlides = computed(() => {
     heroData.value?.desserts?.flatMap((dessert) =>
       (dessert.photos || []).map((photo) => ({
         path: photo.path,
-        name: dessert.name
+        name: dessert.name,
+        category: dessert.category
       })),
     ) || []
 
@@ -90,7 +96,9 @@ const heroSlides = computed(() => {
   return unique.length ? unique.slice(0, 8) : fallbackSlides
 })
 
-const floatingNames = computed(() => [...new Set(heroSlides.value.map((item) => item.name))].slice(0, 6))
+const floatingNames = computed(() =>
+  [...new Set(heroSlides.value.map((item) => `${item.category} · ${item.name}`))].slice(0, 8)
+)
 
 watch(
   () => route.fullPath,
@@ -197,13 +205,23 @@ onBeforeUnmount(() => {
           <div class="hero-slide-tint" />
         </div>
 
-        <div class="hero-float-labels">
-          <span
-            v-for="(name, index) in floatingNames"
-            :key="`${name}-${index}`"
-            :style="{ animationDelay: `${index * 0.35}s` }"
-          >
-            {{ name }}
+        <div v-if="floatingNames.length" class="hero-name-ticker">
+          <span class="hero-name-track">
+            <span
+              v-for="(name, index) in floatingNames"
+              :key="`ticker-primary-${index}-${name}`"
+              class="hero-name-pill"
+            >
+              {{ name }}
+            </span>
+            <span
+              v-for="(name, index) in floatingNames"
+              :key="`ticker-copy-${index}-${name}`"
+              class="hero-name-pill"
+              aria-hidden="true"
+            >
+              {{ name }}
+            </span>
           </span>
         </div>
       </div>

@@ -18,6 +18,7 @@ let previousFocusedElement: HTMLElement | null = null;
 const activePhoto = computed(
   () => allPhotos.value[activePhotoIndex.value] || null,
 );
+const hasKbju = computed(() => Boolean(props.dessert?.ttk?.kbju));
 
 const selectPhoto = (index: number) => {
   activePhotoIndex.value = index;
@@ -201,28 +202,24 @@ onBeforeUnmount(() => {
               <p>{{ dessert.decor || "нет данных" }}</p>
             </div>
 
-            <div class="product-modal-kbju">
+            <div v-if="hasKbju" class="product-modal-kbju">
               <h4>КБЖУ</h4>
               <div class="product-kbju-grid">
                 <div class="product-kbju-item">
                   <span>Белки</span>
-                  <strong>{{
-                    dessert.ttk?.kbju?.proteins || "нет данных"
-                  }}</strong>
+                  <strong>{{ dessert.ttk?.kbju?.proteins || "—" }}</strong>
                 </div>
                 <div class="product-kbju-item">
                   <span>Жиры</span>
-                  <strong>{{ dessert.ttk?.kbju?.fats || "нет данных" }}</strong>
+                  <strong>{{ dessert.ttk?.kbju?.fats || "—" }}</strong>
                 </div>
                 <div class="product-kbju-item">
                   <span>Углеводы</span>
-                  <strong>{{
-                    dessert.ttk?.kbju?.carbs || "нет данных"
-                  }}</strong>
+                  <strong>{{ dessert.ttk?.kbju?.carbs || "—" }}</strong>
                 </div>
                 <div class="product-kbju-item">
                   <span>Ккал</span>
-                  <strong>{{ dessert.ttk?.kbju?.kcal || "нет данных" }}</strong>
+                  <strong>{{ dessert.ttk?.kbju?.kcal || "—" }}</strong>
                 </div>
               </div>
             </div>
