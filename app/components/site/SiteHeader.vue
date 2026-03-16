@@ -28,6 +28,12 @@ const onEscape = (event: KeyboardEvent) => {
   }
 }
 
+const onResize = () => {
+  if (window.innerWidth > 760) {
+    closeMobileMenu()
+  }
+}
+
 const stopSlideTimer = () => {
   if (slideTimer) {
     clearInterval(slideTimer)
@@ -107,21 +113,40 @@ watch(
   },
 )
 
+watch(isMobileMenuOpen, (isOpen) => {
+  if (!process.client) {
+    return
+  }
+  document.body.style.overflow = isOpen ? 'hidden' : ''
+})
+
 watch([() => props.showHero, () => heroSlides.value.length], startSlideTimer)
 
 onMounted(() => {
   window.addEventListener('keydown', onEscape)
+  window.addEventListener('resize', onResize, { passive: true })
   startSlideTimer()
 })
 
 onBeforeUnmount(() => {
   stopSlideTimer()
   window.removeEventListener('keydown', onEscape)
+  window.removeEventListener('resize', onResize)
+  if (process.client) {
+    document.body.style.overflow = ''
+  }
 })
 </script>
 
 <template>
   <header class="hero" id="top">
+    <button
+      v-if="isMobileMenuOpen"
+      class="mobile-nav-backdrop"
+      type="button"
+      aria-label="Закрыть мобильное меню"
+      @click="closeMobileMenu"
+    />
     <nav class="top-nav glass-panel reveal-up delay-1" :class="{ 'is-open': isMobileMenuOpen }">
       <div class="top-nav-head">
         <NuxtLink to="/" class="brand-block">
@@ -133,7 +158,7 @@ onBeforeUnmount(() => {
           type="button"
           :aria-expanded="isMobileMenuOpen"
           aria-controls="mobile-nav-dropdown"
-          aria-label="Открыть или закрыть меню"
+          :aria-label="isMobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'"
           @click="toggleMobileMenu"
         >
           <span>Меню</span>
