@@ -37,6 +37,12 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       TELEGRAM_REVIEW_CHAT_ID: ${TELEGRAM_REVIEW_CHAT_ID:-}
       TELEGRAM_ADMIN_IDS: ${TELEGRAM_ADMIN_IDS:-502773482,1135012604}
+      VK_BOT_TOKEN: ${VK_BOT_TOKEN:-}
+      VK_PEER_IDS: ${VK_PEER_IDS:-}
+      VK_REVIEW_PEER_IDS: ${VK_REVIEW_PEER_IDS:-}
+      VK_API_VERSION: ${VK_API_VERSION:-5.199}
+      VK_API_BASE_URL: ${VK_API_BASE_URL:-https://api.vk.com/method}
+      VK_HTTP_TIMEOUT_MS: ${VK_HTTP_TIMEOUT_MS:-15000}
       ADMIN_CREDENTIAL: malinaAdminP
       PUBLIC_SITE_URL: https://malina14.ru
     command: sh -c "npm run prisma:generate && npx prisma db push --skip-generate && npm run prisma:seed && node .output/server/index.mjs"

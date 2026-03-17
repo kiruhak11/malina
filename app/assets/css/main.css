@@ -2146,11 +2146,7 @@ textarea::placeholder {
   }
 
   .mobile-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .mobile-actions .btn:first-child {
-    grid-column: 1 / -1;
+    grid-template-columns: 1fr;
   }
 }
 

@@ -192,7 +192,7 @@ onBeforeUnmount(() => {
             rel="noopener noreferrer"
             @click="closeMobileMenu"
           >
-            MAX
+            MAX группа
           </a>
         </div>
         <a class="mobile-phone" :href="phoneHref" @click="closeMobileMenu">{{ phoneDisplay }}</a>

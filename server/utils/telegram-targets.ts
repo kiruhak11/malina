@@ -24,3 +24,12 @@ export const getReviewTelegramTargets = (config: ReturnType<typeof useRuntimeCon
   const adminIds = getAdminTelegramIds(config)
   return unique([...reviewIds, ...commonIds, ...adminIds])
 }
+
+export const getOrderVkTargets = (config: ReturnType<typeof useRuntimeConfig>) =>
+  unique(parseIdList(config.vkPeerIds || ''))
+
+export const getReviewVkTargets = (config: ReturnType<typeof useRuntimeConfig>) => {
+  const reviewIds = parseIdList(config.vkReviewPeerIds || '')
+  const commonIds = parseIdList(config.vkPeerIds || '')
+  return unique([...reviewIds, ...commonIds])
+}

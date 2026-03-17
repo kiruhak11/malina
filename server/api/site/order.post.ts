@@ -2,8 +2,9 @@ import { readBody } from 'h3'
 import { prisma } from '../../utils/prisma'
 import { assertMaxLength, isValidFutureDate, isValidPhone, sanitizeText } from '../../utils/input'
 import { enforceRateLimit } from '../../utils/rate-limit'
-import { getOrderTelegramTargets } from '../../utils/telegram-targets'
+import { getOrderTelegramTargets, getOrderVkTargets } from '../../utils/telegram-targets'
 import { sendTelegramMessage } from '../../utils/telegram'
+import { sendVkMessage } from '../../utils/vk'
 
 type OrderPayload = {
   name?: string
@@ -53,17 +54,21 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Комментарий слишком длинный (максимум 1000 символов).' })
   }
 
-  const token = String(config.telegramBotToken || '')
-  const targets = getOrderTelegramTargets(config).filter(isValidTelegramChatId)
+  const telegramToken = String(config.telegramBotToken || '')
+  const telegramTargets = getOrderTelegramTargets(config).filter(isValidTelegramChatId)
+  const vkToken = String(config.vkBotToken || '')
+  const vkTargets = getOrderVkTargets(config)
+  const vkApiVersion = String(config.vkApiVersion || '5.199')
+  const vkApiBaseUrl = String(config.vkApiBaseUrl || 'https://api.vk.com/method')
 
-  if (!token) {
-    throw createError({ statusCode: 500, statusMessage: 'Не настроен TELEGRAM_BOT_TOKEN.' })
-  }
+  const canSendTelegram = Boolean(telegramToken && telegramTargets.length)
+  const canSendVk = Boolean(vkToken && vkTargets.length)
 
-  if (!targets.length) {
+  if (!canSendTelegram && !canSendVk) {
     throw createError({
       statusCode: 500,
-      statusMessage: 'Не настроены TELEGRAM_CHAT_ID или TELEGRAM_ADMIN_IDS.'
+      statusMessage:
+        'Не настроены каналы уведомлений. Укажите TELEGRAM_BOT_TOKEN+TELEGRAM_CHAT_ID/TELEGRAM_ADMIN_IDS или VK_BOT_TOKEN+VK_PEER_IDS.'
     })
   }
 
@@ -86,28 +91,58 @@ export default defineEventHandler(async (event) => {
     `Дата заказа: ${orderDate}`,
     `Дополнительно: ${details || 'нет данных'}`
   ].join('\n')
+  const plainMessageText = [
+    'Новая заявка (МАЛИНА)',
+    `ID: ${created.id}`,
+    `Имя: ${name}`,
+    `Телефон: ${phone}`,
+    `Десерт: ${dessert}`,
+    `Дата заказа: ${orderDate}`,
+    `Дополнительно: ${details || 'нет данных'}`
+  ].join('\n')
 
-  let deliveredCount = 0
+  let telegramDeliveredCount = 0
+  let vkDeliveredCount = 0
   let lastTelegramError = ''
-  for (const chatId of targets) {
-    try {
-      await sendTelegramMessage(token, chatId, messageText)
-      deliveredCount += 1
-    } catch (error) {
-      lastTelegramError = error instanceof Error ? error.message : String(error)
-      console.error(`Order Telegram send failed for chat ${chatId}`, error)
+  let lastVkError = ''
+
+  if (canSendTelegram) {
+    for (const chatId of telegramTargets) {
+      try {
+        await sendTelegramMessage(telegramToken, chatId, messageText)
+        telegramDeliveredCount += 1
+      } catch (error) {
+        lastTelegramError = error instanceof Error ? error.message : String(error)
+        console.error(`Order Telegram send failed for chat ${chatId}`, error)
+      }
     }
   }
 
-  if (!deliveredCount) {
-    console.error(`Order ${created.id} saved, but Telegram delivery failed.`, lastTelegramError)
+  if (canSendVk) {
+    for (const target of vkTargets) {
+      try {
+        await sendVkMessage(vkToken, target, plainMessageText, vkApiVersion, vkApiBaseUrl)
+        vkDeliveredCount += 1
+      } catch (error) {
+        lastVkError = error instanceof Error ? error.message : String(error)
+        console.error(`Order VK send failed for target ${target}`, error)
+      }
+    }
+  }
+
+  if (!telegramDeliveredCount && !vkDeliveredCount) {
+    console.error(`Order ${created.id} saved, but notifications delivery failed.`, {
+      telegram: lastTelegramError,
+      vk: lastVkError
+    })
     return {
       ok: true,
       id: created.id,
       telegramDelivered: 0,
-      warning: 'Заявка сохранена, но уведомление в Telegram не отправлено. Мы обработаем ее вручную.'
+      vkDelivered: 0,
+      warning: 'Заявка сохранена, но уведомления не отправлены в Telegram/VK. Мы обработаем ее вручную.'
     }
   }
 
-  return { ok: true, id: created.id, telegramDelivered: deliveredCount }
+  return { ok: true, id: created.id, telegramDelivered: telegramDeliveredCount, vkDelivered: vkDeliveredCount }
 })
