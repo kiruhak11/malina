@@ -83,6 +83,14 @@ const categoryOptions = computed(() =>
   [...new Set(desserts.value.map((item) => item.category.trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'ru-RU'))
 )
+const dessertSlugOptions = computed(() =>
+  [...desserts.value]
+    .sort((a, b) => a.name.localeCompare(b.name, 'ru-RU'))
+    .map((item) => ({
+      slug: item.slug,
+      label: `${item.name} (${item.slug})`
+    }))
+)
 
 const status = ref('')
 const statusIsError = ref(false)
@@ -602,7 +610,10 @@ onBeforeUnmount(() => {
       <div class="admin-grid admin-grid-2 admin-upload-grid">
         <input ref="uploadFileInput" type="file" accept="image/jpeg,image/png,image/webp" @change="onUploadFileChange" />
         <input v-model.trim="uploadPhoto.title" type="text" placeholder="Название фото (для файла)" />
-        <input v-model.trim="uploadPhoto.dessertSlug" type="text" placeholder="slug десерта или пусто (для файла)" />
+        <select v-model="uploadPhoto.dessertSlug">
+          <option value="">Без привязки к десерту</option>
+          <option v-for="item in dessertSlugOptions" :key="item.slug" :value="item.slug">{{ item.label }}</option>
+        </select>
         <select v-model="uploadPhoto.source">
           <option value="admin">admin</option>
           <option value="seed">seed</option>
