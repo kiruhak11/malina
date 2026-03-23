@@ -22,6 +22,17 @@ const emit = defineEmits<{
 
 const activeSectionSlug = ref('')
 
+const sectionCards = computed(() =>
+  props.sections.map((section) => ({
+    id: section.id,
+    name: section.name,
+    slug: section.slug,
+    icon: section.icon,
+    itemsCount: section.items.length,
+    coverPhotoPath: section.items[0]?.photos?.[0]?.path || '/images/roll-classic.svg'
+  }))
+)
+
 const activeSection = computed(() => {
   if (!activeSectionSlug.value) {
     return null
@@ -55,20 +66,32 @@ const selectSection = (slug: string) => {
     <h2>{{ props.title || 'Праздничный каталог' }}</h2>
 
     <div v-if="props.sections.length" class="catalog-groups">
-      <div class="holiday-tabs" role="tablist" aria-label="Разделы праздничного каталога">
+      <div class="catalog-categories holiday-categories" role="tablist" aria-label="Разделы праздничного каталога">
         <button
-          v-for="(section, index) in props.sections"
+          v-for="(section, index) in sectionCards"
           :key="section.id"
-          class="holiday-tab"
-          :class="{ 'holiday-tab--active': activeSectionSlug === section.slug }"
+          class="catalog-category-card holiday-category-card"
+          :class="{ 'holiday-category-card--active': activeSectionSlug === section.slug }"
           :style="{ '--catalog-index': index }"
           type="button"
           role="tab"
           :aria-selected="activeSectionSlug === section.slug"
           @click="selectSection(section.slug)"
         >
-          <span v-if="section.icon" class="holiday-tab-icon" aria-hidden="true">{{ section.icon }}</span>
-          <span>{{ section.name }}</span>
+          <span
+            class="catalog-category-cover"
+            :style="{
+              backgroundImage: `linear-gradient(130deg, rgba(36, 15, 24, 0.16), rgba(32, 45, 24, 0.2)), url('${section.coverPhotoPath}')`
+            }"
+          />
+          <span class="catalog-category-body">
+            <strong>{{ section.name }}</strong>
+            <small>
+              <template v-if="section.icon">{{ section.icon }} · </template>
+              Позиций: {{ section.itemsCount }}
+            </small>
+          </span>
+          <span class="catalog-category-arrow" aria-hidden="true">›</span>
         </button>
       </div>
 
