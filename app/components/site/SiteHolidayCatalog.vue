@@ -20,7 +20,8 @@ const emit = defineEmits<{
   openDessert: [dessert: Product]
 }>()
 
-const activeSectionSlug = ref('')
+const selectedSectionSlug = ref<string | null>(null)
+const transitionName = ref<'catalog-swap-forward' | 'catalog-swap-back'>('catalog-swap-forward')
 
 const sectionCards = computed(() =>
   props.sections.map((section) => ({
@@ -33,31 +34,36 @@ const sectionCards = computed(() =>
   }))
 )
 
-const activeSection = computed(() => {
-  if (!activeSectionSlug.value) {
+const selectedSection = computed(() => {
+  if (!selectedSectionSlug.value) {
     return null
   }
 
-  return props.sections.find((section) => section.slug === activeSectionSlug.value) || null
+  return props.sections.find((section) => section.slug === selectedSectionSlug.value) || null
 })
 
 watch(
   () => props.sections,
   (sections) => {
-    if (!sections.length) {
-      activeSectionSlug.value = ''
+    if (!selectedSectionSlug.value) {
       return
     }
 
-    if (!sections.some((section) => section.slug === activeSectionSlug.value)) {
-      activeSectionSlug.value = sections[0].slug
+    if (!sections.some((section) => section.slug === selectedSectionSlug.value)) {
+      selectedSectionSlug.value = null
     }
   },
   { immediate: true }
 )
 
-const selectSection = (slug: string) => {
-  activeSectionSlug.value = slug
+const openSection = (slug: string) => {
+  transitionName.value = 'catalog-swap-forward'
+  selectedSectionSlug.value = slug
+}
+
+const resetSelectedSection = () => {
+  transitionName.value = 'catalog-swap-back'
+  selectedSectionSlug.value = null
 }
 </script>
 
@@ -66,46 +72,49 @@ const selectSection = (slug: string) => {
     <h2>{{ props.title || 'Праздничный каталог' }}</h2>
 
     <div v-if="props.sections.length" class="catalog-groups">
-      <div class="catalog-categories holiday-categories" role="tablist" aria-label="Разделы праздничного каталога">
-        <button
-          v-for="(section, index) in sectionCards"
-          :key="section.id"
-          class="catalog-category-card holiday-category-card"
-          :class="{ 'holiday-category-card--active': activeSectionSlug === section.slug }"
-          :style="{ '--catalog-index': index }"
-          type="button"
-          role="tab"
-          :aria-selected="activeSectionSlug === section.slug"
-          @click="selectSection(section.slug)"
+      <Transition :name="transitionName" mode="out-in">
+        <div
+          v-if="!selectedSection"
+          key="holiday-categories"
+          class="catalog-categories catalog-surface holiday-categories"
+          aria-label="Разделы праздничного каталога"
         >
-          <span
-            class="catalog-category-cover"
-            :style="{
-              backgroundImage: `linear-gradient(130deg, rgba(36, 15, 24, 0.16), rgba(32, 45, 24, 0.2)), url('${section.coverPhotoPath}')`
-            }"
-          />
-          <span class="catalog-category-body">
-            <strong>{{ section.name }}</strong>
-            <small>
-              <template v-if="section.icon">{{ section.icon }} · </template>
-              Позиций: {{ section.itemsCount }}
-            </small>
-          </span>
-          <span class="catalog-category-arrow" aria-hidden="true">›</span>
-        </button>
-      </div>
+          <button
+            v-for="(section, index) in sectionCards"
+            :key="section.id"
+            class="catalog-category-card holiday-category-card"
+            :style="{ '--catalog-index': index }"
+            type="button"
+            @click="openSection(section.slug)"
+          >
+            <span
+              class="catalog-category-cover"
+              :style="{
+                backgroundImage: `linear-gradient(130deg, rgba(36, 15, 24, 0.16), rgba(32, 45, 24, 0.2)), url('${section.coverPhotoPath}')`
+              }"
+            />
+            <span class="catalog-category-body">
+              <strong>{{ section.name }}</strong>
+              <small>
+                <template v-if="section.icon">{{ section.icon }} · </template>
+                Позиций: {{ section.itemsCount }}
+              </small>
+            </span>
+            <span class="catalog-category-arrow" aria-hidden="true">›</span>
+          </button>
+        </div>
 
-      <Transition name="holiday-tab-swap" mode="out-in">
-        <div v-if="activeSection" :key="activeSection.id" class="catalog-group catalog-surface">
+        <div v-else :key="`holiday-group-${selectedSection.slug}`" class="catalog-group catalog-surface">
           <div class="catalog-group-head">
-            <h3>{{ activeSection.name }}</h3>
-            <p>Позиций: {{ activeSection.items.length }}</p>
+            <button class="btn btn-ghost" type="button" @click="resetSelectedSection">← Все разделы</button>
+            <h3>{{ selectedSection.name }}</h3>
+            <p>Позиций: {{ selectedSection.items.length }}</p>
           </div>
 
-          <div v-if="activeSection.items.length" class="cards">
+          <div v-if="selectedSection.items.length" class="cards">
             <article
-              v-for="(item, index) in activeSection.items"
-              :key="`${activeSection.slug}-${item.slug}`"
+              v-for="(item, index) in selectedSection.items"
+              :key="`${selectedSection.slug}-${item.slug}`"
               class="card tilt-hover"
               :style="{ '--catalog-index': index }"
             >
