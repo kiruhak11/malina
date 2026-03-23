@@ -1,4 +1,5 @@
 import { requireAdmin } from '../../../utils/admin-auth'
+import { invalidateHolidayCatalogCache } from '../../../utils/holiday-catalog'
 import { prisma } from '../../../utils/prisma'
 
 export default defineEventHandler(async (event) => {
@@ -15,6 +16,8 @@ export default defineEventHandler(async (event) => {
   })
 
   await prisma.dessert.delete({ where: { id } })
+
+  invalidateHolidayCatalogCache()
 
   return { ok: true }
 })

@@ -32,6 +32,7 @@ model Dessert {
   updatedAt     DateTime @updatedAt
 
   photos Photo[]
+  holidaySections HolidaySectionDessert[]
 
   @@index([active])
   @@index([category])
@@ -98,4 +99,41 @@ model AdminAccessLink {
   usedAt    DateTime?
 
   @@index([expiresAt])
+}
+
+model HolidayCatalogSettings {
+  id        String   @id @default(cuid())
+  title     String   @default("Праздничный каталог")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model HolidaySection {
+  id               String                 @id @default(cuid())
+  name             String
+  slug             String                 @unique
+  active           Boolean                @default(true)
+  sortOrder        Int                    @default(100)
+  isCurrentHoliday Boolean                @default(false)
+  icon             String?
+  activeFrom       DateTime?
+  activeTo         DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  desserts         HolidaySectionDessert[]
+
+  @@index([active, sortOrder])
+  @@index([isCurrentHoliday])
+}
+
+model HolidaySectionDessert {
+  sectionId String
+  dessertId String
+  createdAt DateTime @default(now())
+
+  section HolidaySection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  dessert Dessert        @relation(fields: [dessertId], references: [id], onDelete: Cascade)
+
+  @@id([sectionId, dessertId])
+  @@index([dessertId])
 }

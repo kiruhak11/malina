@@ -34,6 +34,67 @@ export default defineEventHandler(async (event) => {
     })
   ])
 
+  const dessertIds = dessertsRaw.map((dessert) => dessert.id)
+  const holidaySectionSlugsByDessertId = new Map<string, string[]>()
+  let holidayCatalogTitle = 'Праздничный каталог'
+  let holidaySectionsRaw: Array<{
+    id: string
+    name: string
+    slug: string
+    active: boolean
+    sortOrder: number
+    isCurrentHoliday: boolean
+    icon: string | null
+    activeFrom: Date | null
+    activeTo: Date | null
+    _count: { desserts: number }
+  }> = []
+
+  try {
+    const [holidaySettings, holidaySections, holidayMappings] = await Promise.all([
+      prisma.holidayCatalogSettings.findFirst({
+        orderBy: { createdAt: 'asc' }
+      }),
+      prisma.holidaySection.findMany({
+        include: {
+          _count: {
+            select: {
+              desserts: true
+            }
+          }
+        },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
+      }),
+      dessertIds.length
+        ? prisma.holidaySectionDessert.findMany({
+            where: {
+              dessertId: { in: dessertIds }
+            },
+            include: {
+              section: {
+                select: {
+                  slug: true
+                }
+              }
+            }
+          })
+        : Promise.resolve([])
+    ])
+
+    holidayCatalogTitle = holidaySettings?.title || 'Праздничный каталог'
+    holidaySectionsRaw = holidaySections
+
+    for (const mapping of holidayMappings) {
+      const existing = holidaySectionSlugsByDessertId.get(mapping.dessertId) || []
+      existing.push(mapping.section.slug)
+      holidaySectionSlugsByDessertId.set(mapping.dessertId, existing)
+    }
+  } catch (error: unknown) {
+    if ((error as { code?: string })?.code !== 'P2021') {
+      throw error
+    }
+  }
+
   const desserts = dessertsRaw.map((dessert) => ({
     ...dessert,
     ttk: {
@@ -43,7 +104,8 @@ export default defineEventHandler(async (event) => {
         carbs: dessert.ttkCarbs,
         kcal: dessert.ttkKcal
       }
-    }
+    },
+    holidaySectionSlugs: holidaySectionSlugsByDessertId.get(dessert.id) || []
   }))
 
   const photos = photosRaw.map((photo) => ({
@@ -56,6 +118,21 @@ export default defineEventHandler(async (event) => {
     desserts,
     photos,
     reviews,
-    orders
+    orders,
+    holidayCatalog: {
+      title: holidayCatalogTitle,
+      sections: holidaySectionsRaw.map((section) => ({
+        id: section.id,
+        name: section.name,
+        slug: section.slug,
+        active: section.active,
+        sortOrder: section.sortOrder,
+        isCurrentHoliday: section.isCurrentHoliday,
+        icon: section.icon,
+        activeFrom: section.activeFrom,
+        activeTo: section.activeTo,
+        dessertCount: section._count.desserts
+      }))
+    }
   }
 })

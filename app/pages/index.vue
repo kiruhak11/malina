@@ -14,6 +14,16 @@ type SitePublicPayload = {
   desserts: Product[]
   reviews: Review[]
   gallery: Array<{ id: string; path: string; title: string | null }>
+  holidayCatalog: {
+    title: string
+    sections: Array<{
+      id: string
+      name: string
+      slug: string
+      icon: string | null
+      items: Product[]
+    }>
+  }
 }
 
 const { data: siteData, pending, error, refresh } = await useFetch<SitePublicPayload>('/api/site/public', {
@@ -33,6 +43,14 @@ const groupedProducts = computed(() => {
 })
 
 const reviews = computed<Review[]>(() => siteData.value?.reviews || [])
+const holidayCatalog = computed(() => {
+  const fallback = {
+    title: 'Праздничный каталог',
+    sections: [] as SitePublicPayload['holidayCatalog']['sections']
+  }
+
+  return siteData.value?.holidayCatalog || fallback
+})
 
 const orderForm = reactive({
   name: '',
@@ -161,7 +179,7 @@ const submitReview = async () => {
   <main class="site-main">
     <section v-if="pending && !siteData" class="section reveal-up">
       <h2>Загрузка данных</h2>
-      <p>Получаем каталог, отзывы и галерею.</p>
+      <p>Получаем каталог, праздничные подборки, отзывы и галерею.</p>
     </section>
 
     <section v-else-if="pageErrorMessage" class="section reveal-up">
@@ -174,6 +192,12 @@ const submitReview = async () => {
       <SiteAbout />
       <SiteCatalog
         :grouped-products="groupedProducts"
+        @select-dessert="selectDessert"
+        @open-dessert="openDessertModal"
+      />
+      <SiteHolidayCatalog
+        :title="holidayCatalog.title"
+        :sections="holidayCatalog.sections"
         @select-dessert="selectDessert"
         @open-dessert="openDessertModal"
       />

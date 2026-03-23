@@ -1,8 +1,9 @@
 import { prisma } from '../../utils/prisma'
 import { isSafePublicImagePath } from '../../utils/input'
+import { getVisibleHolidayCatalog } from '../../utils/holiday-catalog'
 
 export default defineEventHandler(async () => {
-  const [dessertsRaw, reviews, gallery] = await Promise.all([
+  const [dessertsRaw, reviews, gallery, holidayCatalogRaw] = await Promise.all([
     prisma.dessert.findMany({
       where: { active: true },
       include: {
@@ -38,7 +39,8 @@ export default defineEventHandler(async () => {
         dessertId: true,
         createdAt: true
       }
-    })
+    }),
+    getVisibleHolidayCatalog()
   ])
 
   const desserts = dessertsRaw.map((dessert) => ({
@@ -81,9 +83,31 @@ export default defineEventHandler(async () => {
       createdAt: photo.createdAt
     }))
 
+  const dessertById = new Map(desserts.map((dessert) => [dessert.id, dessert]))
+
+  const holidayCatalog = {
+    title: holidayCatalogRaw.title,
+    sections: holidayCatalogRaw.sections.map((section) => ({
+      id: section.id,
+      name: section.name,
+      slug: section.slug,
+      icon: section.icon,
+      items: section.dessertIds
+        .map((dessertId) => dessertById.get(dessertId))
+        .filter((dessert): dessert is (typeof desserts)[number] => Boolean(dessert))
+    }))
+  }
+
+  const dessertsInHolidayCatalog = new Set(
+    holidayCatalogRaw.sections.flatMap((section) => section.dessertIds)
+  )
+
+  const mainCatalogDesserts = desserts.filter((dessert) => !dessertsInHolidayCatalog.has(dessert.id))
+
   return {
-    desserts,
+    desserts: mainCatalogDesserts,
     reviews,
-    gallery: safeGallery
+    gallery: safeGallery,
+    holidayCatalog
   }
 })

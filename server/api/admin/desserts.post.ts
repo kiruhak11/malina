@@ -4,6 +4,7 @@ import { PhotoSource } from '@prisma/client'
 import { getHeader, readBody, readMultipartFormData } from 'h3'
 import { requireAdmin } from '../../utils/admin-auth'
 import { assertMaxLength, sanitizeText } from '../../utils/input'
+import { invalidateHolidayCatalogCache } from '../../utils/holiday-catalog'
 import { prisma } from '../../utils/prisma'
 import { writeUploadFile } from '../../utils/uploads'
 
@@ -17,6 +18,7 @@ type DessertPayload = {
   price?: unknown
   leadTimeHours?: unknown
   active?: unknown
+  holidaySectionSlugs?: unknown
   ttk?: {
     kbju?: {
       proteins?: unknown
@@ -47,6 +49,46 @@ const nullable = (value: unknown) => {
   return next ? next : null
 }
 const isValidSlug = (value: string) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)
+
+const parseHolidaySectionSlugs = (value: unknown): string[] => {
+  if (value === undefined || value === null || value === '') {
+    return []
+  }
+
+  const rawValues =
+    Array.isArray(value)
+      ? value
+      : typeof value === 'string'
+        ? (() => {
+            const normalized = value.trim()
+            if (!normalized) {
+              return []
+            }
+            if (normalized.startsWith('[')) {
+              try {
+                const parsed = JSON.parse(normalized)
+                return Array.isArray(parsed) ? parsed : []
+              } catch {
+                return normalized.split(',')
+              }
+            }
+            return normalized.split(',')
+          })()
+        : []
+
+  const slugs = [...new Set(rawValues.map((item) => clean(item)).filter(Boolean))]
+
+  for (const slug of slugs) {
+    if (!isValidSlug(slug) || !assertMaxLength(slug, 80)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Некорректный slug праздничного раздела.'
+      })
+    }
+  }
+
+  return slugs
+}
 
 const parseBoolean = (value: unknown, fallback: boolean) => {
   if (value === undefined || value === null || value === '') {
@@ -124,6 +166,7 @@ const toBodyFromMultipart = async (event: Parameters<typeof readMultipartFormDat
     price: field('price'),
     leadTimeHours: field('leadTimeHours'),
     active: field('active'),
+    holidaySectionSlugs: field('holidaySectionSlugs'),
     ttk: {
       kbju: {
         proteins: field('ttkProteins'),
@@ -149,6 +192,7 @@ export default defineEventHandler(async (event) => {
 
   const slug = clean(body.slug)
   const name = clean(body.name)
+  const holidaySectionSlugs = parseHolidaySectionSlugs(body.holidaySectionSlugs)
 
   if (!slug || !name) {
     throw createError({ statusCode: 400, statusMessage: 'Поля slug и name обязательны.' })
@@ -209,6 +253,35 @@ export default defineEventHandler(async (event) => {
         })
       }
 
+      if (holidaySectionSlugs.length) {
+        const sections = await tx.holidaySection.findMany({
+          where: {
+            slug: { in: holidaySectionSlugs }
+          },
+          select: {
+            id: true,
+            slug: true
+          }
+        })
+
+        if (sections.length !== holidaySectionSlugs.length) {
+          const sectionSlugs = new Set(sections.map((item) => item.slug))
+          const missing = holidaySectionSlugs.filter((item) => !sectionSlugs.has(item))
+          throw createError({
+            statusCode: 404,
+            statusMessage: `Праздничные разделы не найдены: ${missing.join(', ')}.`
+          })
+        }
+
+        await tx.holidaySectionDessert.createMany({
+          data: sections.map((section) => ({
+            sectionId: section.id,
+            dessertId: dessert.id
+          })),
+          skipDuplicates: true
+        })
+      }
+
       return tx.dessert.findUnique({
         where: { id: dessert.id },
         include: {
@@ -218,6 +291,8 @@ export default defineEventHandler(async (event) => {
         }
       })
     })
+
+    invalidateHolidayCatalogCache()
 
     return { ok: true, dessert: created }
   } catch (error: unknown) {

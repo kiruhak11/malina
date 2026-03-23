@@ -254,9 +254,68 @@ const inferLeadTimeHours = (category) => {
   return null
 }
 
+const ensureHolidayCatalogDefaults = async () => {
+  const settings = await prisma.holidayCatalogSettings.findFirst({
+    orderBy: { createdAt: 'asc' }
+  })
+
+  if (!settings) {
+    await prisma.holidayCatalogSettings.create({
+      data: {
+        title: 'Праздничный каталог'
+      }
+    })
+  }
+
+  await prisma.holidaySection.upsert({
+    where: { slug: 'birthday' },
+    update: {
+      name: 'День рождения',
+      sortOrder: 10
+    },
+    create: {
+      name: 'День рождения',
+      slug: 'birthday',
+      active: true,
+      sortOrder: 10
+    }
+  })
+
+  await prisma.holidaySection.upsert({
+    where: { slug: 'weddings' },
+    update: {
+      name: 'Свадьбы',
+      sortOrder: 20
+    },
+    create: {
+      name: 'Свадьбы',
+      slug: 'weddings',
+      active: true,
+      sortOrder: 20
+    }
+  })
+
+  await prisma.holidaySection.upsert({
+    where: { slug: 'current-holiday' },
+    update: {
+      name: 'Текущий праздник',
+      isCurrentHoliday: true,
+      sortOrder: 30
+    },
+    create: {
+      name: 'Текущий праздник',
+      slug: 'current-holiday',
+      active: false,
+      sortOrder: 30,
+      isCurrentHoliday: true
+    }
+  })
+}
+
 async function main() {
   const dessertsCount = await prisma.dessert.count()
   if (dessertsCount > 0) {
+    await ensureHolidayCatalogDefaults()
     console.log('Seed skipped: desserts already exist.')
     return
   }
@@ -305,6 +364,8 @@ async function main() {
       approved: true
     }))
   })
+
+  await ensureHolidayCatalogDefaults()
 
   console.log('Seed completed successfully.')
 }
