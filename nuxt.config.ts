@@ -18,7 +18,10 @@ export default defineNuxtConfig({
         }
       ],
       link: [
-        { rel: 'icon', type: 'image/png', href: '/favicon.png' }
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'shortcut icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'icon', type: 'image/png', sizes: '120x120', href: '/favicon-120x120.png' },
+        { rel: 'apple-touch-icon', sizes: '120x120', href: '/favicon-120x120.png' }
       ]
     }
   },
