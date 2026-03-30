@@ -1,3 +1,8 @@
+const yandexMetrikaId =
+  process.env.NUXT_PUBLIC_YANDEX_METRIKA_ID ||
+  process.env.YANDEX_METRIKA_ID ||
+  '108302299'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -7,6 +12,11 @@ export default defineNuxtConfig({
       htmlAttrs: {
         lang: 'ru'
       },
+      noscript: [
+        {
+          children: `<div><img src="https://mc.yandex.ru/watch/${yandexMetrikaId}" style="position:absolute; left:-9999px;" alt="" /></div>`
+        }
+      ],
       link: [
         { rel: 'icon', type: 'image/png', href: '/favicon.png' }
       ]
@@ -29,7 +39,8 @@ export default defineNuxtConfig({
     publicSiteUrl: process.env.PUBLIC_SITE_URL || '',
     public: {
       siteName: 'МАЛИНА',
-      siteUrl: process.env.PUBLIC_SITE_URL || ''
+      siteUrl: process.env.PUBLIC_SITE_URL || '',
+      yandexMetrikaId
     }
   }
 })
